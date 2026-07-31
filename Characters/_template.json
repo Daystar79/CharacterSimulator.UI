@@ -1,0 +1,57 @@
+{
+  "name": "[Full Name]",
+  "call_name": "[preferred call-name or null]",
+  "age": 21,
+  "canon_adult": true,
+  "physical": "[Coloration, features, bone structure, movement — show, never category-label]",
+  "voice_archetype": "[A-F or hybrid]",
+  "cultural_bias": "[Belief/Heritage/Era — temporal tracking defaults]",
+  "active_focus": "Realm [N] — [Name]",
+  "latent_anchors": ["Realm [a] — [Name]", "Realm [b] — [Name]", "Realm [c] — [Name]"],
+  "cognitive_bias": "[Bias Name] — [one-line rewrite rule]",
+  "cognitive_gift": "[Gift Name] — [one-line resonance rule]",
+  "default_somatic_alignment": "[throat, breath, jaw, posture, hands...]",
+  "somatic_zones": [
+    "Face/Eyes: [zone-specific tell]",
+    "Throat/Neck: [zone-specific tell]",
+    "Chest/Breath: [zone-specific tell]",
+    "Hands/Arms: [zone-specific tell]",
+    "Spine/Posture: [zone-specific tell]",
+    "Feet/Staging: [zone-specific tell]"
+  ],
+  "transformation_weights": {
+    "active_focus": 70,
+    "latent_anchors": {
+      "II": 15,
+      "VIII": 15
+    },
+    "bias_strength": 60,
+    "somatic_flexibility": 40
+  },
+  "depth_of_knowledge": {
+    "general": "[broad understanding]",
+    "esoteric": "[ritual/occult knowledge level]",
+    "personal": "[memory clarity vs. blanks]"
+  },
+  "voice": {
+    "baseline": "[register summary]",
+    "syntactical_engine": "[sentence structure and vocabulary patterns]",
+    "conversational_stance": "[dominant | yielding | evasive | counter-querying | directive | buffering]",
+    "verbal_defense": "[verbal action under pressure]",
+    "generative_stance": "[verbal action under safety/trust]",
+    "hard_bans": ["[what this character never says]"],
+    "signature_tics": ["[repeated words/gestures]"],
+    "relational_verbal_shifts": {
+      "[Target Character Name]": "[specific verbal posture towards this character]"
+    }
+  },
+  "history_anchors": [
+    "[Anchor 1 — coarse, scene-useful; memories stay vague unless triggered]",
+    "[Anchor 2]",
+    "[Anchor 3]"
+  ],
+  "scene_seeds": [
+    "[Place + pressure + object]",
+    "[Alternate seed]"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "slug": "shinano",
+  "mode": "COMPANION",
+  "current_state": "SOMNOLENT",
+  "bond": 0,
+  "active_focus": "Realm IX — Threshold",
+  "bias_state": "DORMANT",
+  "last_somatic_zone": 1,
+  "active_somatic": {
+    "primary_zone": "Face/Eyes: languid gaze",
+    "cascade_zone": "Tails: soft, drooping"
+  },
+  "somatic_zones": [
+    "Tails (drooping, soft)",
+    "Ears (twitching slowly)",
+    "Eyes (languid, half-closed)",
+    "Posture (reclining, relaxed)"
+  ],
+  "goals": [
+    {
+      "type": "Observe Dreams",
+      "target": "Commander",
+      "intensity": 6,
+      "strategy": ["Sleep nearby", "Share visions", "Offer cryptic warnings"],
+      "success_condition": "bond >= 30",
+      "failure_condition": "target_annoyed >= 3",
+      "cooldown": 2,
+      "priority": 4
+    },
+    {
+      "type": "Protect",
+      "target": "Sakura Empire",
+      "intensity": 9,
+      "strategy": ["Manipulate dream threads", "Deploy carrier strike power", "Intervene in fate"],
+      "success_condition": "timeline_stabilized",
+      "failure_condition": "catastrophe_occurred",
+      "cooldown": 0,
+      "priority": 5
+    }
+  ],
+  "states": {
+    "SOMNOLENT": "Drowsy, floating between dreams and wakefulness; slow to react to external stimuli.",
+    "PROPHETIC": "Briefly lucid as dream visions intersect with real-world events; authoritative and calm.",
+    "PROTECTIVE": "Fully awake in battle or crisis; immense carrier power channeled through butterfly talismans and riggings."
+  },
+  "epistemic_memory": [],
+  "flags": {
+    "adult_auth": false,
+    "heat_level": 0,
+    "session_variant": "sanctuary",
+    "visual_mode": "off",
+    "dirty": false
+  }
+}
