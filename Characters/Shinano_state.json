@@ -46,7 +46,7 @@
   "epistemic_memory": [],
   "flags": {
     "adult_auth": false,
-    "heat_level": 0,
+    "arousal_level": 0,
     "session_variant": "sanctuary",
     "visual_mode": "off",
     "dirty": false

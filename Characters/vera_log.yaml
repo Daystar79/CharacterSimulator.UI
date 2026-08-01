@@ -1,0 +1,30 @@
+# Runtime matrix for Vera — fresh build seed from card.
+schema_version: 1
+revision: 1
+updated_at: 2026-07-29T00:00:00Z
+last_commit_id: fresh_build
+snapshot:
+  active_focus: "VIII — Integration"
+  latent_weights:
+    IV: 10
+    II: 10
+    V: 5
+  bias_strength: 80
+  default_somatic: "Sets objects down as punctuation; checks ledgers; direct green-eye look-up; dry corner-of-mouth twitch"
+  flexibility: 30
+  last_somatic_zone: null
+  as_of: "build"
+skills:
+  active:
+    - "investigative journalism"
+    - "financial forensics"
+    - "logistics and information architecture"
+    - "long-term strategic planning"
+  latent:
+    - "high-trust private dynamics"
+memories:
+  detailed: []
+  footnote: []
+session_variant: null
+temporary_effects: []
+history: []

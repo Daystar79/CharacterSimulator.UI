@@ -1,0 +1,30 @@
+# Runtime matrix for Victor (Thomas) — fresh build seed from card.
+schema_version: 1
+revision: 1
+updated_at: 2026-07-29T00:00:00Z
+last_commit_id: fresh_build
+snapshot:
+  active_focus: "V — Echoes"
+  latent_weights:
+    IV: 15
+    VIII: 10
+    II: 5
+  bias_strength: 70
+  default_somatic: "Steady hands and voice; early arrival; chair-straightening; fists in pockets; jaw lock under stress"
+  flexibility: 35
+  last_somatic_zone: null
+  as_of: "build"
+skills:
+  active:
+    - "structural welding"
+    - "shop foreman and inspection"
+    - "recovery meeting facilitation"
+    - "physical materials sense"
+  latent:
+    - "body mechanics under heavy labor"
+memories:
+  detailed: []
+  footnote: []
+session_variant: null
+temporary_effects: []
+history: []
