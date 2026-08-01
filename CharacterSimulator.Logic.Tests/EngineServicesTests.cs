@@ -101,4 +101,16 @@ public class EngineServicesTests
         turnManager.RunConversation(charA, charB, "Quiet park at dusk", maxTurns: 2);
         Assert.Equal(4, turnsCompleted); // 2 turns x 2 characters
     }
+
+    [Fact]
+    public void CliLlmClient_MistralVibe_ExecutesSuccessfully()
+    {
+        var vibeClient = LlmDiscoveryService.CreateClient("Mistral Vibe");
+        Assert.IsType<CliLlmClient>(vibeClient);
+
+        var charA = new Character { Name = "Serena" };
+        string response = vibeClient.SendPrompt(charA, "Hello", "A quiet room");
+        Assert.False(string.IsNullOrWhiteSpace(response));
+        Assert.DoesNotContain("[CLI ERROR", response);
+    }
 }
