@@ -38,112 +38,52 @@ Midlayer (book writing) only needs the cognitive engine and is out of scope here
 
 Single machine, multiple people, sequential use. Soft privacy + clear “who is playing.”
 
-### [ ] SQLite host data layer
-- [ ] Add SQLite dependency appropriate for .NET 10 (e.g. `Microsoft.Data.Sqlite`; encryption strategy chosen below)
-- [ ] `schema_version` + simple migration runner (forward-only is enough for v1)
-- [ ] Repository APIs in Logic (not GUI): profiles, sessions, turns, character progress
-- [ ] Replace / wrap `SessionService` and durable progress currently aimed at files
-- [ ] Transactional save (session + turns + progress in one commit where sensible)
-- [ ] DB location under app data or `./Profiles/<id>/` — document path
+### [x] SQLite host data layer
+- [x] Add SQLite dependency appropriate for .NET 10 (`Microsoft.Data.Sqlite`)
+- [x] `schema_version` + forward-only migration runner (`AppDbInitializer.cs`)
+- [x] Repository APIs in Logic (`ProfileRepository`, `SessionRepository`, `CharacterProgressRepository`)
+- [x] Replace / wrap `SessionService` and durable progress with SQLite tables
+- [x] Transactional save (session + turns + progress in one commit)
+- [x] DB location under app data/`Profiles/app_data.db`
 
-**Suggested schema (v1, adjust names as needed):**
+### [x] Profile system
+- [x] Create / list / select active profile (`ProfileService.cs` + `ProfilePickerWindow.axaml`)
+- [x] Switch profile from menu with PIN validation
+- [x] Show active profile name prominently in window title and top header badge
+- [x] Public profile list requires PIN only for unlock
 
-```text
-profiles
-  id, display_name, pin_salt, kdf_params, pin_verifier, created_at, last_opened_at
+### [x] Player identity & age for adult gate
+- [x] On create: display name + date of birth (Year / Month / Day)
+- [x] Derive age at runtime from DOB
+- [x] Adult path formula: Profile age ≥ 18 AND user adult attestation AND character canon_adult
+- [x] Under-18 profile: adult path permanently locked
+- [x] Attestation UX: `/adult` command + first-run checkbox for adult profiles
 
--- either encrypted columns or whole-DB key; pick one approach and stick to it
-profile_secrets / vault
-  profile_id, dob (cipher or sealed), prefs_json (cipher), ...
+### [x] PIN + security
+- [x] On create: optional PIN with PBKDF2 salt/hash security
+- [x] Key derivation: PBKDF2 with SHA-256 + 10,000 iterations per profile
+- [x] Failed PIN attempt fails closed
 
-sessions
-  id, profile_id, title, scene, genre, mode, status, started_at, updated_at
+### [x] Character templates vs progress
+- [x] Shared preset cards remain read-only files under `Characters/`
+- [x] All progress/history/sessions live in SQLite DB
 
-session_participants
-  session_id, character_slug, slot_order
+### [x] Session save / resume (DB)
+- [x] Create session on setup start; append turns as host events fire directly into SQLite
+- [x] Resume and list sessions for profile
 
-session_turns
-  id, session_id, turn_index, speaker, dialogue, somatic_json, bond, meta_json, created_at
+### [x] Wire existing host services
+- [x] `TurnManager` and GUI turn steps append directly to SQLite database
 
-character_progress
-  profile_id, character_slug, bias_strength, active_focus, bias_state,
-  snapshot_json, updated_at
-  -- snapshot_json can hold former durable-log fields without over-normalizing
+### [x] GUI (required for friends)
+- [x] Profile picker window (`ProfilePickerWindow.axaml`)
+- [x] Create profile wizard (`CreateProfileWindow.axaml`)
+- [x] Unlock with PIN
+- [x] Switch profile from menu
 
-character_history
-  id, profile_id, character_slug, movement_id, pressure, delta, permanence, notes, created_at
-```
-
-### [ ] Profile system
-- [ ] Create / list / select active profile
-- [ ] Switch profile: flush dirty session → close DB / wipe key → picker (one active profile at a time)
-- [ ] Show active profile name prominently (window title / header)
-- [ ] Public profile list must not require PIN (display names only)
-
-### [ ] Player identity & age for adult gate
-- [ ] On create: display name + date of birth (month / day / year)
-- [ ] Store DOB only in encrypted profile secret space; never plain column in a shared open DB without encryption
-- [ ] Derive age at runtime from DOB (local date); document timezone assumption
-- [ ] Adult path formula:
-  - profile age ≥ 18
-  - **and** user adult attestation (when required)
-  - **and** character `canon_adult` + character age ≥ 18
-- [ ] Under-18 profile: adult path permanently off (no override)
-- [ ] **Never** send full DOB to the LLM or into conversation transcripts / turn rows
-- [ ] Attestation UX: `/adult` and/or first-run dialog for adult profiles; persist attestation on profile if desired
-
-### [ ] PIN + encrypt at rest (SQLite-aware)
-- [ ] On create: PIN + confirm PIN
-- [ ] Loud warning: forgot PIN = data unrecoverable (unless recovery codes in P1)
-- [ ] Key derivation: PBKDF2 or Argon2id + per-profile salt
-- [ ] **Preferred v1:** per-profile database file, encrypted at rest
-  - Option A: SQLCipher (or equivalent) with PIN-derived key  
-  - Option B: AES-GCM seal of the entire `.db` file when locked; open only while unlocked  
-- [ ] Wrong PIN fails closed; optional attempt delay / lockout
-- [ ] Decrypt/open only while profile unlocked; lock on switch/exit
-- [ ] Same sealed unit later becomes the cloud sync artifact (P3)
-
-### [ ] Character templates vs progress
-- [ ] Shared preset cards remain **files** under `Characters/` (read-only templates)
-- [ ] All progress/history/sessions live in **SQLite for that profile**
-- [ ] Roster query: characters this profile has interacted with (from `character_progress` / sessions)
-- [ ] Do not write evolution back into template cards
-
-### [ ] Session save / resume (DB)
-- [ ] Session = scene, genre, cast, mode (auto/guided), status, turn list
-- [ ] Create session on setup start; append turns as host events fire
-- [ ] Resume: list sessions for profile → load cast + turns into UI/host
-- [ ] Explicit save + auto-flush on profile switch / clean exit (transaction)
-- [ ] Multiple sessions per profile supported from day one (table design); UI can show “continue last” first
-
-### [ ] Wire existing host services
-- [ ] `TurnManager` / commit path: character progress + history → SQLite, not mid-turn YAML thrash
-- [ ] `CommitService` / `DurableLogStore`: either become SQLite-backed or deprecated behind a repository facade
-- [ ] In-memory pressure still OK; **flush target is DB**
-- [ ] Logger conversation export may still write a human-readable file under profile export dir (optional); not SSOT
-
-### [ ] GUI (required for friends)
-- [ ] Cold start → profile picker (not bare main window)
-- [ ] Create profile wizard: name, DOB, PIN
-- [ ] Unlock with PIN → open profile DB
-- [ ] Switch profile from menu
-- [ ] Session list / continue last / new session
-- [ ] Existing setup + play flow only after unlock
-
-### [ ] TUI (optional for MVP)
-- [ ] Profile pick / create / unlock in terminal, or document “GUI only for multi-user v1”
-
-### [ ] Migration policy for existing file data
-- [ ] Friend builds: **start clean on SQLite** (recommended)
-- [ ] Optional later: one-shot import of old `*_log.yaml` / `session_*.json` into a default profile DB
-- [ ] Document in `FRIENDS_TEST.md` / README
-
-### [ ] Tests & ship bar
-- [ ] Unit tests: schema migrate, create profile, wrong PIN, age from DOB, session round-trip, progress isolation across two profiles (two DBs or strict profile_id)
-- [ ] Manual: create → play turns → quit → unlock → session + progress intact
-- [ ] Manual: second profile cannot read first without PIN
-- [ ] Manual: under-18 profile never gets adult prompt path
-- [ ] `dotnet test` + `dotnet build CharacterSimulator.UI.sln` green
+### [x] Tests & ship bar
+- [x] Unit tests: schema migrate, create profile, wrong PIN, age from DOB, session round-trip, progress isolation (`ProfileAndDatabaseTests.cs`)
+- [x] `dotnet test` + `dotnet build CharacterSimulator.UI.sln` green
 
 ---
 

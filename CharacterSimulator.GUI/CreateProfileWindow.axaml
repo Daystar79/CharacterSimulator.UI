@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="CharacterSimulator.GUI.CreateProfileWindow"
+        Title="Create New Profile — Character Simulator Studio"
+        Width="480" Height="480"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#0F172A">
+
+    <Border Padding="20">
+        <StackPanel Spacing="14">
+            
+            <TextBlock Text="👤 CREATE NEW USER PROFILE" FontSize="15" FontWeight="Bold" Foreground="#38BDF8"/>
+            <TextBlock Text="Set up your player profile, date of birth (for adult path calculation), and optional PIN." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap"/>
+            
+            <Separator Background="#334155"/>
+
+            <!-- Display Name -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Player / Profile Name:" FontSize="11" FontWeight="Bold" Foreground="#CBD5E1"/>
+                <TextBox Name="TxtName" Text="Player 1" Height="34" VerticalContentAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Date of Birth -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Date of Birth (Year / Month / Day):" FontSize="11" FontWeight="Bold" Foreground="#CBD5E1"/>
+                <Grid ColumnDefinitions="*,*,*">
+                    <NumericUpDown Name="NumYear" Grid.Column="0" Minimum="1920" Maximum="2026" Value="2000" FormatString="0000" Margin="0,0,4,0"/>
+                    <NumericUpDown Name="NumMonth" Grid.Column="1" Minimum="1" Maximum="12" Value="1" FormatString="00" Margin="2,0,2,0"/>
+                    <NumericUpDown Name="NumDay" Grid.Column="2" Minimum="1" Maximum="31" Value="1" FormatString="00" Margin="4,0,0,0"/>
+                </Grid>
+                <TextBlock Text="* Age is calculated locally. Profiles under 18 have adult content paths locked." FontSize="10" Foreground="#64748B"/>
+            </StackPanel>
+
+            <!-- PIN -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Optional Security PIN (Leave blank for none):" FontSize="11" FontWeight="Bold" Foreground="#CBD5E1"/>
+                <TextBox Name="TxtPin" PasswordChar="•" Watermark="Optional PIN..." Height="34" VerticalContentAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Adult Attestation -->
+            <CheckBox Name="ChkAdultAttest" Content="I attest that I am 18+ and wish to enable Adult Mode (/adult on)" FontSize="11" Foreground="#F59E0B" Margin="0,4"/>
+
+            <Separator Background="#334155"/>
+
+            <DockPanel LastChildFill="True" Margin="0,6,0,0">
+                <Button Name="BtnCancel" Content="Cancel" Background="#334155" Foreground="White" Padding="12,6" CornerRadius="6" Click="OnCancelClicked"/>
+                <Button Name="BtnSave" Content="Save Profile" Background="#16A34A" Foreground="White" FontWeight="Bold" Padding="16,6" CornerRadius="6" HorizontalAlignment="Right" Click="OnSaveClicked"/>
+            </DockPanel>
+
+        </StackPanel>
+    </Border>
+</Window>

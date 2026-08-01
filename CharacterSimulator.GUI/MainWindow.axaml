@@ -23,6 +23,9 @@
                     <Separator/>
                     <MenuItem Header="↺ Reset Stage" Click="OnResetClicked"/>
                 </MenuItem>
+                <MenuItem Header="👤 Profile" Foreground="#F8FAFC">
+                    <MenuItem Header="🔑 Switch Profile..." Click="OnSwitchProfileClicked"/>
+                </MenuItem>
                 <MenuItem Header="🎮 Mode" Foreground="#F8FAFC">
                     <MenuItem Header="🤖 Auto-Play Mode" Click="OnSetAutoPlayMode"/>
                     <MenuItem Header="🎮 Player-Guided Mode" Click="OnSetPlayerGuidedMode"/>
@@ -42,6 +45,9 @@
                     <TextBlock Text="CHARACTER SIMULATOR" FontSize="13" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                     <Border Name="BadgeStatus" Background="#065F46" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
                         <TextBlock Name="TxtBadgeStatus" Text="● READY" FontSize="9" FontWeight="Bold" Foreground="#34D399"/>
+                    </Border>
+                    <Border Name="BadgeProfile" Background="#1E1B4B" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                        <TextBlock Name="TxtActiveProfile" Text="👤 Profile: Player 1 (Age 25)" FontSize="9" FontWeight="Bold" Foreground="#A7F3D0"/>
                     </Border>
                 </StackPanel>
 

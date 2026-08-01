@@ -11,8 +11,10 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CharacterSimulator.Logic;
+using CharacterSimulator.Logic.Data.Db;
 using CharacterSimulator.Logic.Logs;
 using CharacterSimulator.Logic.Safety;
+using CharacterSimulator.Logic.Services;
 
 namespace CharacterSimulator.GUI;
 
@@ -40,6 +42,8 @@ public partial class MainWindow : Window
     private bool _isPlayerGuidedMode = false;
     private bool _isInitialSetupCompleted = false;
 
+    private DbSession? _activeDbSession;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -49,6 +53,7 @@ public partial class MainWindow : Window
 
         LoadPersistentSettings();
         UpdateUserRoleDropdown();
+        UpdateProfileBadge();
 
         _controlContext.OnStateChanged += OnSimulationStateChanged;
         Opened += OnMainWindowOpened;
@@ -239,6 +244,20 @@ public partial class MainWindow : Window
 
         string sceneContext = ComposeActiveSceneContext();
         UpdateActiveSceneLabel();
+        
+        var activeProfile = ProfileService.Instance.ActiveProfile;
+        if (activeProfile != null)
+        {
+            _activeDbSession = ProfileService.Instance.Sessions.CreateSession(
+                activeProfile.Id,
+                $"Session with {_charA.Name}",
+                sceneContext,
+                _selectedGenre,
+                _isPlayerGuidedMode ? "PlayerGuided" : "AutoPlay",
+                new List<string> { _selectedCharA, _selectedCharB }
+            );
+        }
+
         TxtStatus.Text = isSoloMode
             ? $"Solo roleplay running... Speak with {_charA.Name}!"
             : $"Roleplay simulation running... Log saving to {logPath}";
@@ -317,6 +336,26 @@ public partial class MainWindow : Window
                 if (!string.IsNullOrEmpty(turnArgs.ImagePrompt))
                 {
                     TxtImagePrompt.Text = turnArgs.ImagePrompt;
+                }
+
+                if (_activeDbSession != null)
+                {
+                    try
+                    {
+                        ProfileService.Instance.Sessions.AddTurn(new DbSessionTurn
+                        {
+                            SessionId = _activeDbSession.Id,
+                            TurnIndex = turnArgs.TurnIndex,
+                            Speaker = turnArgs.SpeakerName,
+                            Target = turnArgs.TargetName,
+                            Dialogue = turnArgs.Dialogue,
+                            SomaticJson = string.Join(", ", turnArgs.SomaticZones),
+                            BondDelta = turnArgs.BondDelta,
+                            CurrentBond = turnArgs.CurrentBond,
+                            SpeakerEmotion = turnArgs.SpeakerEmotion
+                        });
+                    }
+                    catch { }
                 }
 
                 _dialogueFeed.Add(msg);
@@ -823,6 +862,27 @@ public partial class MainWindow : Window
             TxtDelayVal.Text = $"{val}ms";
             _controlContext.DelayMs = val;
             SavePersistentSettings();
+        }
+    }
+
+    private void UpdateProfileBadge()
+    {
+        var profile = ProfileService.Instance.ActiveProfile;
+        if (profile != null)
+        {
+            TxtActiveProfile.Text = $"👤 {profile.DisplayName} (Age {profile.CalculateAge()})";
+            Title = $"Character Simulator Studio — [{profile.DisplayName}]";
+        }
+    }
+
+    private async void OnSwitchProfileClicked(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new ProfilePickerWindow();
+        var result = await dialog.ShowDialog<bool>(this);
+        if (result)
+        {
+            UpdateProfileBadge();
+            TxtStatus.Text = $"Active profile switched to {ProfileService.Instance.ActiveProfile?.DisplayName}";
         }
     }
 
