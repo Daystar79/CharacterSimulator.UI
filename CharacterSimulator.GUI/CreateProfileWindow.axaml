@@ -35,7 +35,7 @@
             <!-- PIN -->
             <StackPanel Spacing="4">
                 <TextBlock Text="Optional Security PIN (Leave blank for none):" FontSize="11" FontWeight="Bold" Foreground="#CBD5E1"/>
-                <TextBox Name="TxtPin" PasswordChar="•" Watermark="Optional PIN..." Height="34" VerticalContentAlignment="Center"/>
+                <TextBox Name="TxtPin" PasswordChar="•" PlaceholderText="Optional PIN..." Height="34" VerticalContentAlignment="Center"/>
             </StackPanel>
 
             <!-- Adult Attestation -->
