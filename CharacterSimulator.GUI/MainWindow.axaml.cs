@@ -243,6 +243,16 @@ public partial class MainWindow : Window
             ? $"Solo roleplay running... Speak with {_charA.Name}!"
             : $"Roleplay simulation running... Log saving to {logPath}";
 
+        _activeTurnManager.OnAgentTurnStarted += (speakerName, providerName) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                TxtWaitingLlm.Text = $"Waiting for {speakerName} ({providerName})...";
+                BadgeWaitingLlm.IsVisible = true;
+                TxtStatus.Text = $"⏳ Dispatching prompt for {speakerName} via {providerName}...";
+            });
+        };
+
         _activeTurnManager.OnAgentOutputLogged += (rawLog) =>
         {
             Dispatcher.UIThread.Post(() =>
@@ -257,6 +267,7 @@ public partial class MainWindow : Window
             _turnHistory.Add(turnArgs);
             Dispatcher.UIThread.Post(() =>
             {
+                BadgeWaitingLlm.IsVisible = false;
                 bool isA = turnArgs.SpeakerName.Equals(_charA?.Name, StringComparison.OrdinalIgnoreCase);
                 Character? speakerChar = isA ? _charA : _charB;
 

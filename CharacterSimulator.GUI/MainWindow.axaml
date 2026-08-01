@@ -85,7 +85,13 @@
         <!-- 3. BOTTOM STATUS BAR -->
         <Border DockPanel.Dock="Bottom" Background="#1E293B" Padding="16,6" BorderBrush="#334155" BorderThickness="0,1,0,0">
             <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Border Name="BadgeWaitingLlm" IsVisible="False" Background="#451A03" CornerRadius="4" Padding="8,3" BorderBrush="#F59E0B" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <TextBlock Text="⏳" FontSize="10" VerticalAlignment="Center"/>
+                            <TextBlock Name="TxtWaitingLlm" Text="Waiting for LLM response..." FontSize="10" FontWeight="Bold" Foreground="#FBBF24" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                     <Border Background="#0F172A" CornerRadius="4" Padding="8,3" BorderBrush="#10B981" BorderThickness="1">
                         <TextBlock Name="TxtActiveLlm" Text="⚡ Agent A: Mock | Agent B: Mock" FontSize="10" FontWeight="Bold" Foreground="#34D399"/>
                     </Border>

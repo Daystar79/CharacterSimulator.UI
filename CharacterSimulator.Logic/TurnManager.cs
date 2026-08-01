@@ -19,6 +19,7 @@ public class TurnManager
     public event Action<GoalEvaluationEventArgs>? OnGoalEvaluated;
     public event Action<string>? OnSceneStarted;
     public event Action<string>? OnAgentOutputLogged;
+    public event Action<string, string>? OnAgentTurnStarted;
 
     public TurnManager(ILLMClient clientA, ILLMClient? clientB, SceneManager sceneManager, Logger logger)
     {
@@ -69,6 +70,10 @@ public class TurnManager
                 string goalContextA = activeGoalA != null ?
                     $"Your current goal: {activeGoalA.Type} {activeGoalA.Target} (Intensity: {activeGoalA.Intensity}). Strategies: {string.Join(", ", activeGoalA.Strategies)}." :
                     "";
+
+                string providerA = (_clientA as CliLlmClient)?.Name ?? "LLM";
+                OnAgentTurnStarted?.Invoke(charA.Name, providerA);
+                OnAgentOutputLogged?.Invoke($"[⏳ {charA.Name}] Dispatching prompt to {providerA}...\n");
 
                 string promptA = await Task.Run(() => _clientA.SendPrompt(charA, inputA, scene, goalContextA));
                 if (controlContext.CancellationToken.IsCancellationRequested) break;
@@ -190,6 +195,10 @@ public class TurnManager
                 string goalContextB = activeGoalB != null ?
                     $"Your current goal: {activeGoalB.Type} {activeGoalB.Target} (Intensity: {activeGoalB.Intensity}). Strategies: {string.Join(", ", activeGoalB.Strategies)}." :
                     "";
+
+                string providerB = (_clientB as CliLlmClient)?.Name ?? "LLM";
+                OnAgentTurnStarted?.Invoke(charB.Name, providerB);
+                OnAgentOutputLogged?.Invoke($"[⏳ {charB.Name}] Dispatching prompt to {providerB}...\n");
 
                 string promptB = await Task.Run(() => _clientB.SendPrompt(charB, inputB, scene, goalContextB));
                 if (controlContext.CancellationToken.IsCancellationRequested) break;
