@@ -507,10 +507,20 @@ public static class CharacterLoader
 
     private static void ResolvePortrait(Character character, string cardPath, string? callName, string legalName)
     {
+        if (string.Equals(character.AvatarPath, "none", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(character.AvatarPath, "false", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(character.AvatarPath, "off", StringComparison.OrdinalIgnoreCase))
+        {
+            character.AvatarPath = null;
+            return;
+        }
+
         if (!string.IsNullOrEmpty(character.AvatarPath) && File.Exists(character.AvatarPath))
             return;
 
         string baseDir = Directory.GetCurrentDirectory();
+        string appDir = AppDomain.CurrentDomain.BaseDirectory;
+        string cardDir = Path.GetDirectoryName(cardPath) ?? baseDir;
         string stem = Path.GetFileNameWithoutExtension(cardPath);
 
         var nameCandidates = new[]
@@ -524,12 +534,13 @@ public static class CharacterLoader
             .Select(s => s!.ToLowerInvariant())
             .Distinct();
 
-        string appDir = AppDomain.CurrentDomain.BaseDirectory;
-
         foreach (var nameLower in nameCandidates)
         {
             string[] candidates =
             {
+                Path.Combine(cardDir, $"{nameLower}.jpg"),
+                Path.Combine(cardDir, $"{nameLower}.png"),
+                Path.Combine(cardDir, $"{nameLower}.webp"),
                 Path.Combine(appDir, "Assets", "Portraits", $"{nameLower}.jpg"),
                 Path.Combine(appDir, "Assets", "Portraits", $"{nameLower}.png"),
                 Path.Combine(baseDir, "CharacterSimulator.GUI", "Assets", "Portraits", $"{nameLower}.jpg"),
@@ -547,6 +558,8 @@ public static class CharacterLoader
                 }
             }
         }
+
+        character.AvatarPath = null;
     }
 
     private static Dictionary<string, object?>? AsStringKeyMap(object? value)

@@ -280,7 +280,14 @@ public partial class MainWindow : Window
                         ImgCanvasFrame.Source = speakerBitmap;
                         TxtCanvasPlaceholder.IsVisible = false;
                     }
-                    catch { }
+                    catch
+                    {
+                        ImgCanvasFrame.Source = null;
+                    }
+                }
+                else
+                {
+                    ImgCanvasFrame.Source = null;
                 }
 
                 if (ImgCanvasFrame.Source == null)
