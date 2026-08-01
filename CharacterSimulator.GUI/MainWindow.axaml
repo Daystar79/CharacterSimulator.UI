@@ -250,22 +250,22 @@
 
                                 <Separator Background="#334155"/>
 
-                                <!-- Health & Energy Bars -->
+                                 <!-- Stress & Arousal Telemetry Bars -->
                                 <Grid ColumnDefinitions="*,*" Margin="0,2">
                                     <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,4,0">
                                         <DockPanel LastChildFill="True">
-                                            <TextBlock Text="Health" FontSize="9" Foreground="#CBD5E1"/>
-                                            <TextBlock Name="TxtCharAHealth" DockPanel.Dock="Right" Text="100%" FontSize="9" Foreground="#34D399" FontWeight="Bold"/>
+                                            <TextBlock Text="Stress" FontSize="9" Foreground="#CBD5E1"/>
+                                            <TextBlock Name="TxtCharAStress" DockPanel.Dock="Right" Text="0" FontSize="9" Foreground="#EF4444" FontWeight="Bold"/>
                                         </DockPanel>
-                                        <ProgressBar Name="ProgressCharAHealth" Height="6" Minimum="0" Maximum="100" Value="100" Foreground="#34D399" Background="#1E293B" CornerRadius="3"/>
+                                        <ProgressBar Name="ProgressCharAStress" Height="6" Minimum="0" Maximum="100" Value="0" Foreground="#EF4444" Background="#1E293B" CornerRadius="3"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Spacing="2" Margin="4,0,0,0">
                                         <DockPanel LastChildFill="True">
-                                            <TextBlock Text="Energy" FontSize="9" Foreground="#CBD5E1"/>
-                                            <TextBlock Name="TxtCharAEnergy" DockPanel.Dock="Right" Text="100%" FontSize="9" Foreground="#F59E0B" FontWeight="Bold"/>
+                                            <TextBlock Text="Arousal" FontSize="9" Foreground="#CBD5E1"/>
+                                            <TextBlock Name="TxtCharAArousal" DockPanel.Dock="Right" Text="0" FontSize="9" Foreground="#F59E0B" FontWeight="Bold"/>
                                         </DockPanel>
-                                        <ProgressBar Name="ProgressCharAEnergy" Height="6" Minimum="0" Maximum="100" Value="100" Foreground="#F59E0B" Background="#1E293B" CornerRadius="3"/>
+                                        <ProgressBar Name="ProgressCharAArousal" Height="6" Minimum="0" Maximum="100" Value="0" Foreground="#F59E0B" Background="#1E293B" CornerRadius="3"/>
                                     </StackPanel>
                                 </Grid>
 
@@ -325,22 +325,22 @@
 
                                 <Separator Background="#334155"/>
 
-                                <!-- Health & Energy Bars -->
+                                <!-- Stress & Arousal Telemetry Bars -->
                                 <Grid ColumnDefinitions="*,*" Margin="0,2">
                                     <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,4,0">
                                         <DockPanel LastChildFill="True">
-                                            <TextBlock Text="Health" FontSize="9" Foreground="#CBD5E1"/>
-                                            <TextBlock Name="TxtCharBHealth" DockPanel.Dock="Right" Text="100%" FontSize="9" Foreground="#34D399" FontWeight="Bold"/>
+                                            <TextBlock Text="Stress" FontSize="9" Foreground="#CBD5E1"/>
+                                            <TextBlock Name="TxtCharBStress" DockPanel.Dock="Right" Text="0" FontSize="9" Foreground="#EF4444" FontWeight="Bold"/>
                                         </DockPanel>
-                                        <ProgressBar Name="ProgressCharBHealth" Height="6" Minimum="0" Maximum="100" Value="100" Foreground="#34D399" Background="#1E293B" CornerRadius="3"/>
+                                        <ProgressBar Name="ProgressCharBStress" Height="6" Minimum="0" Maximum="100" Value="0" Foreground="#EF4444" Background="#1E293B" CornerRadius="3"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Spacing="2" Margin="4,0,0,0">
                                         <DockPanel LastChildFill="True">
-                                            <TextBlock Text="Energy" FontSize="9" Foreground="#CBD5E1"/>
-                                            <TextBlock Name="TxtCharBEnergy" DockPanel.Dock="Right" Text="100%" FontSize="9" Foreground="#F59E0B" FontWeight="Bold"/>
+                                            <TextBlock Text="Arousal" FontSize="9" Foreground="#CBD5E1"/>
+                                            <TextBlock Name="TxtCharBArousal" DockPanel.Dock="Right" Text="0" FontSize="9" Foreground="#F59E0B" FontWeight="Bold"/>
                                         </DockPanel>
-                                        <ProgressBar Name="ProgressCharBEnergy" Height="6" Minimum="0" Maximum="100" Value="100" Foreground="#F59E0B" Background="#1E293B" CornerRadius="3"/>
+                                        <ProgressBar Name="ProgressCharBArousal" Height="6" Minimum="0" Maximum="100" Value="0" Foreground="#F59E0B" Background="#1E293B" CornerRadius="3"/>
                                     </StackPanel>
                                 </Grid>
 

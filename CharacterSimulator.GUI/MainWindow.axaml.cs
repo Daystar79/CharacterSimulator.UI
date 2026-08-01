@@ -283,6 +283,12 @@ public partial class MainWindow : Window
                     catch { }
                 }
 
+                if (ImgCanvasFrame.Source == null)
+                {
+                    TxtCanvasPlaceholder.Text = $"🎭 {turnArgs.SpeakerName} {turnArgs.SpeakerEmotionEmoji}\n[{turnArgs.SpeakerEmotion}]\n\"{TruncateText(turnArgs.Dialogue, 90)}\"";
+                    TxtCanvasPlaceholder.IsVisible = true;
+                }
+
                 var msg = new DialogueMessageModel
                 {
                     TurnIndex = turnArgs.TurnIndex,
@@ -863,6 +869,12 @@ public partial class MainWindow : Window
         });
     }
 
+    private string TruncateText(string str, int max)
+    {
+        if (string.IsNullOrEmpty(str)) return "";
+        return str.Length <= max ? str : str.Substring(0, max - 1) + "…";
+    }
+
     private void UpdateCharacterCards()
     {
         if (_charA != null)
@@ -873,6 +885,10 @@ public partial class MainWindow : Window
             TxtCharAEmoji.Text = _charA.EmotionEmoji;
             TxtCharABond.Text = _charA.Bond.ToString();
             ProgressCharABond.Value = _charA.Bond;
+            TxtCharAStress.Text = _charA.Stress.ToString();
+            ProgressCharAStress.Value = _charA.Stress;
+            TxtCharAArousal.Text = _charA.Arousal.ToString();
+            ProgressCharAArousal.Value = _charA.Arousal;
             TxtCharASomatic.Text = _charA.SomaticZones.Count > 0 ? string.Join(", ", _charA.SomaticZones) : "Calm / None";
 
             if (!string.IsNullOrEmpty(_charA.AvatarPath) && File.Exists(_charA.AvatarPath))
@@ -906,6 +922,10 @@ public partial class MainWindow : Window
             TxtCharBEmoji.Text = _charB.EmotionEmoji;
             TxtCharBBond.Text = _charB.Bond.ToString();
             ProgressCharBBond.Value = _charB.Bond;
+            TxtCharBStress.Text = _charB.Stress.ToString();
+            ProgressCharBStress.Value = _charB.Stress;
+            TxtCharBArousal.Text = _charB.Arousal.ToString();
+            ProgressCharBArousal.Value = _charB.Arousal;
             TxtCharBSomatic.Text = _charB.SomaticZones.Count > 0 ? string.Join(", ", _charB.SomaticZones) : "Calm / None";
 
             if (!string.IsNullOrEmpty(_charB.AvatarPath) && File.Exists(_charB.AvatarPath))

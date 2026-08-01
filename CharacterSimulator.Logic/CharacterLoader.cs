@@ -521,10 +521,14 @@ public static class CharacterLoader
             .Select(s => s!.ToLowerInvariant())
             .Distinct();
 
+        string appDir = AppDomain.CurrentDomain.BaseDirectory;
+
         foreach (var nameLower in nameCandidates)
         {
             string[] candidates =
             {
+                Path.Combine(appDir, "Assets", "Portraits", $"{nameLower}.jpg"),
+                Path.Combine(appDir, "Assets", "Portraits", $"{nameLower}.png"),
                 Path.Combine(baseDir, "CharacterSimulator.GUI", "Assets", "Portraits", $"{nameLower}.jpg"),
                 Path.Combine(baseDir, "CharacterSimulator.GUI", "Assets", "Portraits", $"{nameLower}.png"),
                 Path.Combine(baseDir, "Assets", "Portraits", $"{nameLower}.jpg"),
