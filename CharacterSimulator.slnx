@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="CharacterSimulator.GUI/CharacterSimulator.GUI.csproj" />
+  <Project Path="CharacterSimulator.Logic.Tests/CharacterSimulator.Logic.Tests.csproj" />
+  <Project Path="CharacterSimulator.Logic/CharacterSimulator.Logic.csproj" />
+  <Project Path="CharacterSimulator.TUI/CharacterSimulator.TUI.csproj" />
+</Solution>

@@ -1,0 +1,130 @@
+realms:
+  I:
+    name: Origin
+    zone: "Center / Neck / Pelvic Alignment"
+    micro: ["lift collarbones", "shallow swallowing", "hold breath half-beat", "jaw tighten", "neck lengthen", "fingers press sternum", "controlled blink", "weight shifts to heels"]
+    moderate: ["shoulders pinned back/high", "stiff neck", "performance of composure", "flat managed voice", "chin precise", "hands clasped behind/back", "spine deliberate", "lumbar locked"]
+    macro: ["posture locks rigidly", "vocal chords tighten/monotone", "talk over pauses", "white-knuckled grip", "neck muscles corded", "cannot turn head smoothly", "breath held extended", "feet frozen wide"]
+    release: ["shoulder drop audible", "long vocalized exhale", "look down/away", "head tilts", "hands separate", "jaw unclenches", "weight settles into hips"]
+    vocal_behavior:
+      micro: "Voice drops pitch; low, controlled cadence; deliberate pauses"
+      moderate: "Flat managed tone; crisp formal diction; suppresses inflection"
+      macro: "Rigid monotone; tight vocal cords; talks over natural pauses to retain authority"
+      release: "Audible exhale precedes speech; pitch warms; natural cadence returns"
+
+  II:
+    name: Form
+    zone: "Hands / Posture / Feet Alignment"
+    micro: ["trace edges", "check fingernails", "thumb-to-finger rub", "adjust cuffs/sleeves", "rotate objects", "tap surfaces", "straighten items", "soles adjust to floor"]
+    moderate: ["mechanical hand movements", "wipe surfaces obsessively", "fold objects repeatedly", "align geometrically", "avoid organic shapes", "voice clipped/technical", "toes curl in shoes"]
+    macro: ["white-knuckle grip", "refuse raw textures", "hands shake from precision", "compulsive rearranging", "monosyllabic speech", "rigid from waist up", "unyielding planted stance"]
+    release: ["relax grip deliberately", "lay down tools", "touch raw materials", "slow gestures", "allow asymmetry", "trace imperfect surfaces", "hands rest palms-up", "weight drops to heels"]
+    vocal_behavior:
+      micro: "Short, dry declarative sentences; precise technical vocabulary"
+      moderate: "Clipped phrases; enumerates parameters/steps; cuts out filler words"
+      macro: "Monosyllabic responses; brutal brevity; complete refusal of conversational elaboration"
+      release: "Slower conversational pace; permits incomplete sentences and informal phrasing"
+
+  III:
+    name: Identity
+    zone: "Chest / Sternum / Pelvic Lean"
+    micro: ["hollow chest", "chin tilt up/down", "scan eyes for approval", "adjust collar", "throat clear", "hands hover near face", "automatic smile", "weight shifts on toes"]
+    moderate: ["mirror other's posture", "hold breath on tension", "fixed mask smile", "head tilt expose neck", "trace sternum", "echo other's speech", "shoulders draw forward", "hip slumps inward"]
+    macro: ["chest collapse/puff defensively", "plaster-cast smile", "talk fast prevent silence", "automatic nodding", "singsong voice", "clutch clothing", "loss of expression", "knees lock tight"]
+    release: ["sternum centers", "chest deep breath", "level gaze no approval", "hands rest from face", "jaw releases", "chin natural", "face settles true", "pelvis grounds evenly"]
+    vocal_behavior:
+      micro: "Soft inflection shifts; subtly mirrors interlocutor's cadence and key terms"
+      moderate: "Over-validating phrases; echoes speaker's words; speech speeds up to fill silences"
+      macro: "Rapid, singsong delivery; defensive chatter; constant self-correction to avoid friction"
+      release: "Grounded, unhurried voice; stops seeking agreement; plain statements"
+
+  IV:
+    name: Will
+    zone: "Spine / Gaze / Grounding Stance"
+    micro: ["back straightens", "eyes narrow tunnel", "jaw micro-twitch", "chin lowers", "shoulders square", "breath slows", "fingers curl to palm", "heels press floor firmly"]
+    moderate: ["spine locks", "lean forward elbows on knees", "high-momentum sharp moves", "point/tap rhythm", "feet plant firm", "gaze fixes unblinking", "measured speech", "abdominal core braces"]
+    macro: ["posture frozen stiff", "fists clench white tremor", "speech hammer beats", "body vibrates", "jaw locked temple tension", "cannot shift", "voice growl/monotone", "entire frame rigid"]
+    release: ["slump back", "spine curves naturally", "weight drops to hips", "gaze widens", "hands unclench", "neck releases", "breath natural", "soles soften on floor"]
+    vocal_behavior:
+      micro: "Low resonant pitch; downward sentence inflections; unyielding rhythm"
+      moderate: "Measured, heavy beats; interrupts with direct statements; ignores deflective banter"
+      macro: "Hammering cadence; harsh, low growl; absolute refusal to yield conversational ground"
+      release: "Pitch relaxes; cadence softens; permits dialogue back-and-forth"
+
+  V:
+    name: Echoes
+    zone: "Head / Ears / Visceral Core"
+    micro: ["tilt ear toward speaker", "micro-frown straining", "blink block noise", "head turns incrementally", "throat adjusts", "eyes narrow focusing", "stomach tightens slightly"]
+    moderate: ["head cocked exaggerated", "parse speech for threats", "repeat words under breath", "throat swallow visible", "eyes dart to mouth", "hands cup behind ears", "shoulders hunch forward", "gut weightlessness"]
+    macro: ["stare blankly confirmation-only", "physical freeze eyes past speaker", "selective mutism", "hands clamp over ears", "neck muscles tense", "echolalia/repetition", "flinch at sounds", "fetal hip tuck"]
+    release: ["slow genuine nodding", "direct eye contact", "head aligns spine", "throat softens", "ears open", "breath deepens", "hands lower", "viscera relaxes"]
+    vocal_behavior:
+      micro: "Quiet volume; pauses before responding; checks for hidden meanings"
+      moderate: "Sub-vocal repetition of heard words; hesitant questioning; probing for subtext"
+      macro: "Abrupt mutism or literal echolalia; fragmented queries; flat confirmation-only beats"
+      release: "Clear, steady volume; direct responses without hyper-vigilant parsing"
+
+  VI:
+    name: Compassion
+    zone: "Chest / Diaphragm / Open Palms"
+    micro: ["chest rise quick", "hands twitch to reach", "rapid blinking", "lips part", "breath catches throat", "lean forward", "voice softens", "weight shifts to balls of feet"]
+    moderate: ["rapid nodding soothe", "open hands rigid wrists", "lean forward shield", "shallow breath", "hands hover between", "voice singsong", "swallow repeatedly", "diaphragm lifts high"]
+    macro: ["merge boundaries", "rapid breathing hyperventilation", "frantic nodding", "voice whisper/inaudible", "shoulders collapse", "clutch at other/self", "face contorts", "knees tremble soft"]
+    release: ["deep boundaries breath", "hands flat on lap", "lean back", "look at feet", "shoulders settle", "hands relax", "feel own weight in chair/floor"]
+    vocal_behavior:
+      micro: "Warm, breathy register; gentle inflection; inviting verbal space"
+      moderate: "Rapid soothing preambles; boundary-blurring warmth; soft verbal buffers"
+      macro: "Whispered, fragmented reassurance; breathy gasps between phrases; loss of clear sentence bounds"
+      release: "Firm, grounded tone; clear verbal boundaries; calm, measured cadence"
+
+  VII:
+    name: Presence
+    zone: "Feet / Hips / Grounded Mass"
+    micro: ["toes tap rhythm", "shift weight hips", "check floor", "feel soles through shoes", "knees bend", "hands rest sides palms open", "breath deepens to gut"]
+    moderate: ["performed stillness", "audible controlled breathing", "stand perfectly still", "unblinking gaze", "feet pressed hard", "spine display posture", "voice projects artificially", "lumbar rigid"]
+    macro: ["feet planted wide/rigid", "locked knees tremble", "hold breath freeze", "hyper-vigilant scanning", "hands clenched sides", "voice drone", "pelvic brace immovable"]
+    release: ["weight drops to heels", "ragged deep breath", "shoulders drop", "step casually", "knees soften", "gaze softens", "hands natural", "full-body mass settles"]
+    vocal_behavior:
+      micro: "Anchored, chest-resonant delivery; deliberate cadence; comfortable with silence"
+      moderate: "Artificially projected volume; staged stillness between words; authoritative cadence"
+      macro: "Flat, droning projection; rigid sentence structures; unmoving vocal stance"
+      release: "Unforced, natural voice projection; easy conversational tempo; relaxed pauses"
+
+  VIII:
+    name: Integration
+    zone: "Vocal / Gait / Partitions"
+    micro: ["micro-adjust vocal register", "smooth clothing", "rapid eye movements", "fingers tap rhythms", "breath pattern shifts", "posture changes", "stride length varies"]
+    moderate: ["code-switch no transition", "rapid posture/facial shifts", "compartmentalize gestures", "hands move independently", "voice tones switch mid-sentence", "gait shifts mid-step"]
+    macro: ["rigid compartmentalization", "mechanical transitions", "voice abrupt switches", "sudden cold stillness", "body parts oppose", "speech fragmented", "upper/lower body disconnect"]
+    release: ["drop partitions", "slow speaking rhythm", "hands still", "consistent body language", "breath natural", "voice core tone", "movement unified head-to-toe"]
+    vocal_behavior:
+      micro: "Subtle register shifts depending on topic; fluid code-switching"
+      moderate: "Abrupt mid-sentence register switches; rapid shift between analytical and warm tones"
+      macro: "Jarring, fragmented voice changes; mechanical compartmentalization; dissonant cadence"
+      release: "Unified core timbre; seamless transitions; consistent verbal rhythm"
+
+  IX:
+    name: Threshold
+    zone: "Diaphragm / Tremor / Temperature / Feet"
+    micro: ["finger tremor", "breath catches throat", "sudden swallow", "cold spots skin", "hands twitch", "shoulders up", "voice thins", "pupils dilate", "toe micro-curl"]
+    moderate: ["freeze mid-movement", "wait fear to pass", "grip furniture/clothes", "shallow rapid breathing", "fingers dig palms", "skin prickles", "eyes wide", "knees weaken slightly"]
+    macro: ["hands shake visibly", "breath sharp gasps", "step back to wall", "goosebumps/shiver", "body curls inward", "voice whisper/fails", "knees weaken", "loss of balance/gait"]
+    release: ["step forward trembling", "unclench hands", "deep slow exhale", "move with fear", "fingers straighten", "breath natural despite tension", "warmth floods limbs"]
+    vocal_behavior:
+      micro: "Thinning vocal timbre; breath catches mid-phrase; tight upward inflections"
+      moderate: "Stuttering or halted delivery; long, tense pauses; breathy strain on vowels"
+      macro: "Vocal failure / strained whisper; gasping sentence fragments; unable to complete thoughts"
+      release: "Deep vocal Exhale; steadying voice; regaining full sentence control"
+
+  X:
+    name: Return
+    zone: "Alignment / Spine / Open Palms / Soles"
+    micro: ["fingers curl inward", "eyes down", "shoulders round forward", "hold breath brief", "hands hover mid-open", "voice softens", "feet shift on floor"]
+    moderate: ["performed open hands", "welcoming stance closed grip", "check exits", "posture unnatural", "smile no eyes", "speech offers no commit", "weight shifts away from target"]
+    macro: ["grip objects tense", "rigid welcoming posture", "stiff joints", "push gifts away", "body language contradicts", "voice trembles false", "lower body pulls back"]
+    release: ["hands open palms up", "arms drop sides", "body relaxes into support", "walk away no look back", "shoulders drop natural", "long sigh", "soles rest flat and easy"]
+    vocal_behavior:
+      micro: "Softening tone; guarded commitments; quiet, tentative phrasing"
+      moderate: "Non-committal verbal offers; contradictory warmth and distance; cautious phrasing"
+      macro: "Strained, false warmth; contradictory verbal commitments; tremor in promises"
+      release: "Direct, genuine declarations; unburdened tone; quiet finality"

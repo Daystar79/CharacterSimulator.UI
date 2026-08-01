@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PsychosomaticStateSnapshot",
+  "type": "object",
+  "required": [
+    "character_id",
+    "autonomic_state",
+    "affective_state",
+    "subconscious_bias",
+    "relational_vectors",
+    "priority_arbitration"
+  ],
+  "properties": {
+    "character_id": {
+      "type": "string",
+      "description": "Unique slug for the character"
+    },
+    "timestamp_or_movement": {
+      "type": "string",
+      "description": "Current movement ID, scene timestamp, or tick count"
+    },
+    "autonomic_state": {
+      "type": "object",
+      "required": ["arousal", "stress", "fatigue", "pain", "primary_somatic_zones"],
+      "properties": {
+        "arousal": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "stress": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "fatigue": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "pain": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "primary_somatic_zones": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Z1_Cranial_Ocular",
+              "Z2_Vocal_Cervical",
+              "Z3_Thoracic_Respiratory",
+              "Z4_Abdominal_Visceral",
+              "Z5_Pelvic_Kinesthetic",
+              "Z6_Peripheral_Grounding"
+            ]
+          }
+        },
+        "autonomic_surge": { "type": "boolean" }
+      }
+    },
+    "affective_state": {
+      "type": "object",
+      "required": ["primary_emotion", "secondary_emotion", "emotional_intensity", "impulse"],
+      "properties": {
+        "primary_emotion": { "type": "string" },
+        "secondary_emotion": { "type": "string" },
+        "emotional_intensity": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "impulse": { "type": "string", "description": "Raw un-thought-out reaction urge" }
+      }
+    },
+    "subconscious_bias": {
+      "type": "object",
+      "required": ["active_wound", "active_gift", "bias_state"],
+      "properties": {
+        "active_wound": { "type": "string" },
+        "active_gift": { "type": "string" },
+        "bias_state": {
+          "type": "string",
+          "enum": ["DORMANT", "DEFENSIVE_ACTIVE", "GENERATIVE_ACTIVE"]
+        },
+        "perceptual_warp": { "type": "string" }
+      }
+    },
+    "relational_vectors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "emotional_safety",
+          "attraction_physical",
+          "attraction_emotional",
+          "respect_competence",
+          "status_dynamic",
+          "resentment_friction"
+        ],
+        "properties": {
+          "emotional_safety": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "attraction_physical": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "attraction_emotional": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "respect_competence": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "status_dynamic": { "type": "string", "enum": ["dominant", "yielding", "equals", "deference"] },
+          "resentment_friction": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "perceived_reciprocity": {
+            "type": "object",
+            "properties": {
+              "perceived_liking": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "perceived_threat": { "type": "integer", "minimum": 0, "maximum": 100 }
+            }
+          },
+          "relational_anchors": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "priority_arbitration": {
+      "type": "object",
+      "required": ["winning_drive", "salience_score", "competing_drives"],
+      "properties": {
+        "winning_drive": { "type": "string" },
+        "salience_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "competing_drives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "drive_name": { "type": "string" },
+              "salience": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "output_vector": {
+      "type": "object",
+      "required": ["feels", "thinks", "says", "does"],
+      "properties": {
+        "feels": { "type": "string" },
+        "thinks": { "type": "string" },
+        "says": { "type": "string" },
+        "does": { "type": "string" }
+      }
+    }
+  }
+}
