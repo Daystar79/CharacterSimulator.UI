@@ -73,9 +73,6 @@
                     <Border Background="#0F172A" CornerRadius="4" Padding="8,3" BorderBrush="#3B82F6" BorderThickness="1">
                         <TextBlock Name="TxtActiveMode" Text="🤖 Auto-Play" FontSize="10" FontWeight="Bold" Foreground="#60A5FA"/>
                     </Border>
-                    <Border Background="#0F172A" CornerRadius="4" Padding="8,3" BorderBrush="#10B981" BorderThickness="1">
-                        <TextBlock Name="TxtActiveLlm" Text="⚡ Agent A: Mock | Agent B: Mock" FontSize="10" FontWeight="Bold" Foreground="#34D399"/>
-                    </Border>
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="📍 SCENE:" FontSize="10" FontWeight="Bold" Foreground="#F59E0B"/>
                         <TextBlock Name="TxtActiveScene" Text="[Contemporary] Quiet city apartment..." FontSize="10" Foreground="#E2E8F0" MaxWidth="320" TextTrimming="CharacterEllipsis"/>
@@ -88,8 +85,13 @@
         <!-- 3. BOTTOM STATUS BAR -->
         <Border DockPanel.Dock="Bottom" Background="#1E293B" Padding="16,6" BorderBrush="#334155" BorderThickness="0,1,0,0">
             <DockPanel LastChildFill="True">
-                <TextBlock DockPanel.Dock="Right" Text=".NET 10.0 • RPG Studio" FontSize="11" Foreground="#64748B"/>
-                <TextBlock Name="TxtStatus" Text="Ready. Click File ➔ Simulation Setup to configure characters." FontSize="11" Foreground="#94A3B8"/>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Border Background="#0F172A" CornerRadius="4" Padding="8,3" BorderBrush="#10B981" BorderThickness="1">
+                        <TextBlock Name="TxtActiveLlm" Text="⚡ Agent A: Mock | Agent B: Mock" FontSize="10" FontWeight="Bold" Foreground="#34D399"/>
+                    </Border>
+                    <TextBlock Text=".NET 10.0 • RPG Studio" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Name="TxtStatus" Text="Ready. Click File ➔ Simulation Setup to configure characters." FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
 
