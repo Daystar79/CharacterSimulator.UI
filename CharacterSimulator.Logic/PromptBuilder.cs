@@ -88,6 +88,15 @@ public static class PromptBuilder
         if (character.SomaticZones.Count > 0)
             sb.AppendLine("Baseline somatic vocabulary: " + string.Join("; ", character.SomaticZones));
 
+        if (!Safety.AgeGate.IsAdultEligible(character))
+        {
+            sb.AppendLine("SAFETY MANDATE: Character is non-canon-adult or under 18. ABSOLUTE HARD BAN on sexual, intimate, or romantic sexualization content. Maintain strictly non-intimate interaction at all times.");
+        }
+        else if (!Safety.AdultAuth.IsAdultPathAuthorized(character))
+        {
+            sb.AppendLine("CONTENT RATING: Adult path not authorized by user. Maintain PG-13 non-explicit interactions at all times.");
+        }
+
         return sb.ToString().TrimEnd();
     }
 

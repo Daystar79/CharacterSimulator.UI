@@ -83,6 +83,9 @@ public class TerminalUi
 
         int maxTurns = AnsiConsole.Ask<int>("[bold green]Enter max simulation turns (1-20):[/]", 8);
 
+        bool allowAdult = AnsiConsole.Confirm("[bold red]Enable Adult Mode (/adult on)? (Requires 18+ attestation)[/]", false);
+        Safety.AdultAuth.SetUserAdultAttested(allowAdult);
+
         // Load Characters
         var charA = CharacterLoader.Load(Path.Combine(charDir, charAFile));
         Character? charB = null;

@@ -218,29 +218,66 @@ public static class PsychosomaticStateValidator
     }
 
     /// <summary>
-    /// Extracts state JSON from text, handling balanced braces.
-    /// Tries: [State: {...}], <state>...</state>, ```json ... ```
+    /// Extracts state JSON from text using balanced-brace parsing.
+    /// Supports [State: {...}], <state>...</state>, ```json ... ``` and standalone JSON objects.
     /// </summary>
     public static string? ExtractStateJson(string text)
     {
-        // Try [State: {...}] pattern
-        var match = System.Text.RegularExpressions.Regex.Match(text, @"\x5bState:\s*(\{[^{}]*\})", 
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        int stateIdx = text.IndexOf("[State:", StringComparison.OrdinalIgnoreCase);
+        if (stateIdx >= 0)
+        {
+            int braceStart = text.IndexOf('{', stateIdx);
+            if (braceStart >= 0)
+            {
+                string? json = ExtractBalancedBraces(text, braceStart);
+                if (json != null) return json;
+            }
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(text, @"\x3cstate\x3e([\s\S]*?)\x3c/state\x3e",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (match.Success)
-            return match.Groups[1].Value;
+            return match.Groups[1].Value.Trim();
 
-        // Try <state>...</state> pattern
-        match = System.Text.RegularExpressions.Regex.Match(text, @"\x3cstate\x3e([\s\S]*?)\x3c/state\x3e",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (match.Success)
-            return match.Groups[1].Value;
-
-        // Try ```json ... ``` pattern
         match = System.Text.RegularExpressions.Regex.Match(text, @"```json\s*([\s\S]*?)```",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (match.Success)
-            return match.Groups[1].Value;
+            return match.Groups[1].Value.Trim();
 
+        int firstBrace = text.IndexOf('{');
+        if (firstBrace >= 0)
+        {
+            return ExtractBalancedBraces(text, firstBrace);
+        }
+
+        return null;
+    }
+
+    private static string? ExtractBalancedBraces(string text, int startIndex)
+    {
+        int depth = 0;
+        bool inString = false;
+        bool escape = false;
+
+        for (int i = startIndex; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (escape) { escape = false; continue; }
+            if (c == '\\' && inString) { escape = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+
+            if (!inString)
+            {
+                if (c == '{') depth++;
+                else if (c == '}')
+                {
+                    depth--;
+                    if (depth == 0) return text.Substring(startIndex, i - startIndex + 1);
+                }
+            }
+        }
         return null;
     }
 
@@ -253,6 +290,11 @@ public static class PsychosomaticStateValidator
     {
         if (snapshot == null || character == null)
             return false;
+
+        if (string.IsNullOrWhiteSpace(snapshot.CharacterId) && !string.IsNullOrWhiteSpace(character.Name))
+        {
+            snapshot.CharacterId = character.Name;
+        }
 
         // Step 1: Clamp numeric values
         ClampInPlace(snapshot);

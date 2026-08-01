@@ -19,7 +19,7 @@ This library houses deterministic host logic and bookkeeping rules for `Characte
 - **`DurableLogModels.cs`**: Typed representation of `Characters/[slug]_log.yaml`.
 - **`DurableLogStore.cs`**: Load/save durable YAML logs. Enforces **log overlay precedence** over identity card defaults (focus, latent weights, bias_strength, skills, memories, relational baselines, default somatic). Never writes runtime evolution back into identity cards.
 - **`PressureApplicator.cs`**: Port of Midlayer `logs_io.apply_pressure`. Applies deterministic strength deltas (`low`: 0, `medium`: 5, `high`: 10, `extreme`: 15), permanence mapping, and history tracking.
-- **`CommitService.cs`**: Manages durable log commits on scene breaks, medium+ pressure shifts, session closing, or manual `/save`.
+- **`CommitService.cs`**: Manages in-memory pressure updates per turn, and serializes durable logs to disk on session close or manual `/save`.
 
 ### 3. `Safety/` — Code-Enforced Safety Gates
 - **`AgeGate.cs`**: Hard gate blocking intimate/HEAT paths if `canon_adult == false` or `age < 18`.

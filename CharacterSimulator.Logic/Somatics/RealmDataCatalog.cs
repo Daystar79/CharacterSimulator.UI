@@ -106,13 +106,13 @@ public static class RealmDataCatalog
         string key = realmOrFocusKey.Trim();
         if (Realms.TryGetValue(key, out var exact)) return exact;
 
-        // Try extracting Roman numeral e.g. "VIII — Integration" or "Focus IV"
-        foreach (var rKey in new[] { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" })
+        // Extract longest matching Roman numeral (e.g., "VIII" before "V" or "I")
+        var match = System.Text.RegularExpressions.Regex.Match(key, @"\b(VIII|VII|III|VI|IV|IX|II|V|X|I)\b", 
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (match.Success)
         {
-            if (key.Contains(rKey, StringComparison.OrdinalIgnoreCase))
-            {
-                if (Realms.TryGetValue(rKey, out var found)) return found;
-            }
+            string matchedNum = match.Value.ToUpperInvariant();
+            if (Realms.TryGetValue(matchedNum, out var found)) return found;
         }
 
         return null;

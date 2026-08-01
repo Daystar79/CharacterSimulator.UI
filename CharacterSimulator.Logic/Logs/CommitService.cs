@@ -49,11 +49,25 @@ public class CommitService
     {
         if (charA != null)
         {
-            CommitCharacterLog(charA, movementId, "Session Close", "low", $"Scene: {sceneContext}");
+            if (charA.DurableLog != null && charA.DurableLog.history.Count > 0)
+            {
+                CommitCharacterLogExplicit(charA, movementId, $"Session Close - Scene: {sceneContext}");
+            }
+            else
+            {
+                CommitCharacterLog(charA, movementId, "Session Close", "low", $"Scene: {sceneContext}");
+            }
         }
         if (charB != null && !string.Equals(charB.Name, "None", StringComparison.OrdinalIgnoreCase))
         {
-            CommitCharacterLog(charB, movementId, "Session Close", "low", $"Scene: {sceneContext}");
+            if (charB.DurableLog != null && charB.DurableLog.history.Count > 0)
+            {
+                CommitCharacterLogExplicit(charB, movementId, $"Session Close - Scene: {sceneContext}");
+            }
+            else
+            {
+                CommitCharacterLog(charB, movementId, "Session Close", "low", $"Scene: {sceneContext}");
+            }
         }
     }
 

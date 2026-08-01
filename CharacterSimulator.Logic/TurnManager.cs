@@ -442,10 +442,18 @@ public class TurnManager
     {
         if (character.DurableLog == null)
         {
-            character.DurableLog = new Logs.DurableLog();
-            character.DurableLog.EnsureShape();
-            character.DurableLog.character_id = character.Name;
-            character.DurableLog.snapshot.bias_strength = character.BiasStrength;
+            if (!string.IsNullOrEmpty(character.LogPath) && System.IO.File.Exists(character.LogPath))
+            {
+                character.DurableLog = Logs.DurableLogStore.LoadLog(character.LogPath);
+            }
+
+            if (character.DurableLog == null)
+            {
+                character.DurableLog = new Logs.DurableLog();
+                character.DurableLog.EnsureShape();
+                character.DurableLog.character_id = character.Name;
+                character.DurableLog.snapshot.bias_strength = character.BiasStrength;
+            }
         }
         
         // Apply pressure transformation to in-memory log only
