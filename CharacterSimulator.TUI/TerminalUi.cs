@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CharacterSimulator.Logic;
+using CharacterSimulator.Logic.Safety;
 using Spectre.Console;
 
 namespace CharacterSimulator.TUI;
@@ -84,7 +85,7 @@ public class TerminalUi
         int maxTurns = AnsiConsole.Ask<int>("[bold green]Enter max simulation turns (1-20):[/]", 8);
 
         bool allowAdult = AnsiConsole.Confirm("[bold red]Enable Adult Mode (/adult on)? (Requires 18+ attestation)[/]", false);
-        Safety.AdultAuth.SetUserAdultAttested(allowAdult);
+        AdultAuth.SetUserAdultAttested(allowAdult);
 
         // Load Characters
         var charA = CharacterLoader.Load(Path.Combine(charDir, charAFile));
