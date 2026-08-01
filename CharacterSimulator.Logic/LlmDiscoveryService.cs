@@ -33,8 +33,8 @@ public static class LlmDiscoveryService
             // Mistral's CLI is `vibe` (Mistral Vibe), not a binary named mistral
             Name = "Mistral Vibe",
             ExecutablePath = "vibe",
-            // auto-approve so headless roleplay never blocks on tool prompts
-            ArgumentsTemplate = "-p {0} --auto-approve --output text",
+            // auto-approve, trust, and disable tools so programmatic roleplay never blocks on trust prompts or tool calls
+            ArgumentsTemplate = "-p {0} --trust --disabled-tools \"*\" --auto-approve --output text",
             Aliases = { "vibe", "vibe cli", "mistral", "mistral vibe", "mistral-vibe", "mistral vibe cli" }
         },
         new LlmProviderInfo
@@ -134,7 +134,7 @@ public static class LlmDiscoveryService
             return new CliLlmClient(
                 "Mistral Vibe",
                 vibePath ?? "vibe",
-                "-p {0} --auto-approve --output text");
+                "-p {0} --trust --disabled-tools \"*\" --auto-approve --output text");
         }
 
         if (providerName.Contains("Agy", StringComparison.OrdinalIgnoreCase) ||
