@@ -2,12 +2,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="560" d:DesignHeight="560"
+        mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="680"
         x:Class="CharacterSimulator.GUI.SetupWindow"
         Title="Simulation Setup &amp; LLM Configuration"
-        Width="560" Height="560"
+        Width="640" Height="680"
+        MinWidth="580" MinHeight="620"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
+        CanResize="True"
         Background="#0F172A">
 
     <DockPanel LastChildFill="True">
