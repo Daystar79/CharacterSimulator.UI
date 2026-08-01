@@ -45,6 +45,7 @@ public class CliLlmClient : ILLMClient
             var psi = new ProcessStartInfo
             {
                 FileName = ExecutablePath,
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -59,6 +60,7 @@ public class CliLlmClient : ILLMClient
 
             using var process = new Process { StartInfo = psi };
             process.Start();
+            try { process.StandardInput.Close(); } catch { }
 
             // Read stdout + stderr concurrently to avoid classic pipe deadlocks.
             Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
