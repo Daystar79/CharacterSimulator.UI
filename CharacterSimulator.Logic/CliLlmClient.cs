@@ -40,8 +40,13 @@ public class CliLlmClient : ILLMClient
                    "Check that it is installed and visible on PATH (GUI apps may miss ~/.local/bin).";
         }
 
+        string tempPromptFile = Path.Combine(Path.GetTempPath(), $"cs_prompt_{Guid.NewGuid():N}.md");
+
         try
         {
+            // Plan B: Write prompt payload to ephemeral temp .md file to prevent command line length limits / corruption
+            File.WriteAllText(tempPromptFile, prompt, Encoding.UTF8);
+
             var psi = new ProcessStartInfo
             {
                 FileName = ExecutablePath,
@@ -60,7 +65,15 @@ public class CliLlmClient : ILLMClient
 
             using var process = new Process { StartInfo = psi };
             process.Start();
-            try { process.StandardInput.Close(); } catch { }
+
+            // Pipe prompt to stdin as fallback for CLIs reading stdin directly
+            try
+            {
+                process.StandardInput.Write(prompt);
+                process.StandardInput.Flush();
+                process.StandardInput.Close();
+            }
+            catch { }
 
             // Read stdout + stderr concurrently to avoid classic pipe deadlocks.
             Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
@@ -98,6 +111,14 @@ public class CliLlmClient : ILLMClient
         catch (Exception ex)
         {
             return $"[CLI ERROR: {Name}] Failed to start '{ExecutablePath}': {ex.Message}";
+        }
+        finally
+        {
+            // Ephemeral clean-up: delete the temporary prompt file immediately after C# receives response
+            if (File.Exists(tempPromptFile))
+            {
+                try { File.Delete(tempPromptFile); } catch { }
+            }
         }
     }
 
