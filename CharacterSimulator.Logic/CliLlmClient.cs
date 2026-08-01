@@ -65,15 +65,7 @@ public class CliLlmClient : ILLMClient
 
             using var process = new Process { StartInfo = psi };
             process.Start();
-
-            // Pipe prompt to stdin as fallback for CLIs reading stdin directly
-            try
-            {
-                process.StandardInput.Write(prompt);
-                process.StandardInput.Flush();
-                process.StandardInput.Close();
-            }
-            catch { }
+            try { process.StandardInput.Close(); } catch { }
 
             // Read stdout + stderr concurrently to avoid classic pipe deadlocks.
             Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
