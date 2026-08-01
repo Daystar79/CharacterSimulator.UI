@@ -507,6 +507,9 @@ public static class CharacterLoader
 
     private static void ResolvePortrait(Character character, string cardPath, string? callName, string legalName)
     {
+        if (!string.IsNullOrEmpty(character.AvatarPath) && File.Exists(character.AvatarPath))
+            return;
+
         string baseDir = Directory.GetCurrentDirectory();
         string stem = Path.GetFileNameWithoutExtension(cardPath);
 
