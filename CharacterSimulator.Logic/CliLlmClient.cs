@@ -148,6 +148,9 @@ public class CliLlmClient : ILLMClient
         }
 
         psi.Environment["PATH"] = string.Join(Path.PathSeparator, parts);
+        psi.Environment["PYTHONUNBUFFERED"] = "1";
+        psi.Environment["PYTHONIOENCODING"] = "utf-8";
+        psi.Environment["TERM"] = "dumb";
     }
 
     /// <summary>
