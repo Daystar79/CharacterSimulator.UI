@@ -634,8 +634,13 @@ body, html {
     border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 0.5rem;
-    color: var(--text-primary);
+    color: #f8fafc !important;
     font-size: 0.8rem;
+}
+
+.form-control option, select.form-control option {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
 }
 
 .form-control:focus {

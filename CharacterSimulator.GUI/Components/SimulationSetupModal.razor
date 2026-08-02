@@ -13,6 +13,7 @@
                 <div class="form-group">
                     <label class="form-label">Character A (First Speaker):</label>
                     <select class="form-control" @bind="_selectedCharA">
+                        <option value="">(None / Not Selected)</option>
                         @foreach (var c in _availableCharacters)
                         {
                             <option value="@c">@c</option>
@@ -22,6 +23,7 @@
                 <div class="form-group">
                     <label class="form-label">Character B (Second Speaker):</label>
                     <select class="form-control" @bind="_selectedCharB">
+                        <option value="">(None / Not Selected)</option>
                         @foreach (var c in _availableCharacters)
                         {
                             <option value="@c">@c</option>
@@ -53,6 +55,11 @@
                     <option value="PlayerGuided">🎮 Player-Guided Mode (Human Prompt Injected)</option>
                 </select>
             </div>
+
+            @if (!string.IsNullOrEmpty(_warningMessage))
+            {
+                <div style="color: var(--accent-amber); font-size: 0.72rem; font-weight: 600; margin-top: 0.4rem;">@_warningMessage</div>
+            }
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" @onclick="Close">Cancel</button>
@@ -64,12 +71,13 @@
 @code {
     [Parameter] public EventCallback<bool> OnClosed { get; set; }
 
-    private List<string> _availableCharacters = new() { "serena.md", "kira.md", "victor.md" };
-    private string _selectedCharA = "serena.md";
-    private string _selectedCharB = "kira.md";
+    private List<string> _availableCharacters = new();
+    private string _selectedCharA = "";
+    private string _selectedCharB = "";
     private string _selectedGenre = "Contemporary";
     private string _sceneContext = "Quiet city apartment at midnight during a rainstorm.";
     private string _mode = "AutoPlay";
+    private string _warningMessage = "";
 
     protected override void OnInitialized()
     {
@@ -77,13 +85,17 @@
         if (catalog.Count > 0)
         {
             _availableCharacters = catalog;
-            _selectedCharA = _availableCharacters[0];
-            _selectedCharB = _availableCharacters.Count > 1 ? _availableCharacters[1] : _availableCharacters[0];
         }
     }
 
     private void StartSimulation()
     {
+        if (string.IsNullOrEmpty(_selectedCharA) && string.IsNullOrEmpty(_selectedCharB))
+        {
+            _warningMessage = "⚠️ Please select at least one character to launch the simulation stage.";
+            return;
+        }
+
         OnClosed.InvokeAsync(true);
     }
 
