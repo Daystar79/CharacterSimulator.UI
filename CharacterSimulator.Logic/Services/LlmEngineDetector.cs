@@ -19,7 +19,25 @@ public class LlmEngineDetector
     {
         var engines = new List<DetectedLlmEngine>();
 
-        // 1. Check Mistral Vibe CLI
+        // 1. Check AGY (Antigravity CLI / API)
+        bool agyFound = IsCommandAvailable("agy") || IsCommandAvailable("antigravity") || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AGY_API_KEY"));
+        engines.Add(new DetectedLlmEngine(
+            "AGY",
+            "🚀 Antigravity AGY (Engine / CLI)",
+            agyFound,
+            agyFound ? "AGY active in environment" : "AGY executable/key not found"
+        ));
+
+        // 2. Check Grok (xAI CLI / API)
+        bool grokFound = IsCommandAvailable("grok") || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GROK_API_KEY")) || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("XAI_API_KEY"));
+        engines.Add(new DetectedLlmEngine(
+            "Grok",
+            "🧠 xAI Grok (API / CLI)",
+            grokFound,
+            grokFound ? "Grok API key/CLI detected" : "Grok key/CLI not found"
+        ));
+
+        // 3. Check Mistral Vibe CLI
         bool mistralFound = IsCommandAvailable("vibe") || IsCommandAvailable("mistral-vibe");
         engines.Add(new DetectedLlmEngine(
             "MistralVibe",
@@ -28,7 +46,7 @@ public class LlmEngineDetector
             mistralFound ? "CLI detected in system PATH" : "CLI not found in PATH"
         ));
 
-        // 2. Check Ollama Local API
+        // 4. Check Ollama Local API
         bool ollamaRunning = false;
         string ollamaStatus = "Server offline at http://localhost:11434";
         try
@@ -52,7 +70,7 @@ public class LlmEngineDetector
             ollamaStatus
         ));
 
-        // 3. Fallback Mock Engine (Always Available)
+        // 5. Fallback Mock Engine (Always Available)
         engines.Add(new DetectedLlmEngine(
             "MockEngine",
             "🧪 Mock LLM Engine",

@@ -45,23 +45,42 @@
                     <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="DetectEngines">🔍 Auto-Detect Engines</button>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
-                    <div class="form-group">
-                        <label class="form-label">LLM Provider Engine:</label>
-                        <CustomSelect @bind-Value="_selectedLlmProvider" Options="_llmProviderOptions" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Model Identifier / Tag:</label>
-                        <input class="form-control" @bind="_modelIdentifier" placeholder="e.g. mistral-small, llama3.2" />
+                <!-- SECTION 1: CHAT & SYSTEM ENGINE -->
+                <div style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.3rem;">💬 1. CHAT & SYSTEM ENGINE (Player Prompts & Orchestration)</div>
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 0.68rem;">Chat Provider Engine:</label>
+                            <CustomSelect @bind-Value="_selectedChatLlmProvider" Options="_llmProviderOptions" />
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 0.68rem;">Chat Model Tag:</label>
+                            <input class="form-control" @bind="_chatModelIdentifier" placeholder="e.g. agy-pro, grok-2" />
+                        </div>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.4rem;">
-                    <div class="form-group">
+                <!-- SECTION 2: ROLEPLAY SIMULATION ENGINE -->
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.3rem;">🎭 2. ROLEPLAY SIMULATION ENGINE (In-Character & Somatic Actions)</div>
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 0.68rem;">Roleplay Provider Engine:</label>
+                            <CustomSelect @bind-Value="_selectedRoleplayLlmProvider" Options="_llmProviderOptions" />
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 0.68rem;">Roleplay Model Tag:</label>
+                            <input class="form-control" @bind="_roleplayModelIdentifier" placeholder="e.g. mistral-small, llama3.2" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label">Temperature: @_temperature.ToString("F1")</label>
                         <input type="range" class="form-control" min="0.1" max="1.5" step="0.1" @bind="_temperature" style="padding: 0.2rem;" />
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label">Max Response Tokens:</label>
                         <input type="number" class="form-control" min="128" max="4096" step="128" @bind="_maxTokens" />
                     </div>
@@ -69,7 +88,7 @@
 
                 @if (!string.IsNullOrEmpty(_detectionStatus))
                 {
-                    <div style="font-size: 0.68rem; color: var(--accent-green); font-weight: 600; margin-top: 0.3rem;">@_detectionStatus</div>
+                    <div style="font-size: 0.68rem; color: var(--accent-green); font-weight: 600; margin-top: 0.4rem;">@_detectionStatus</div>
                 }
             </div>
 
@@ -110,7 +129,9 @@
 
     private List<CustomSelect.DropdownOption> _llmProviderOptions = new()
     {
-        new("MistralVibe", "⚡ Mistral Vibe (Local CLI - Free)"),
+        new("AGY", "🚀 Antigravity AGY (Engine / CLI)"),
+        new("Grok", "🧠 xAI Grok (API / CLI)"),
+        new("MistralVibe", "⚡ Mistral Vibe (Local CLI)"),
         new("Ollama", "🦙 Ollama API (http://localhost:11434)"),
         new("MockEngine", "🧪 Mock LLM Engine (Offline Test)")
     };
@@ -120,8 +141,10 @@
     private string _selectedGenre = "Contemporary";
     private string _sceneContext = "Quiet city apartment at midnight during a rainstorm.";
     private string _mode = "PlayerGuided";
-    private string _selectedLlmProvider = "MistralVibe";
-    private string _modelIdentifier = "mistral-small";
+    private string _selectedChatLlmProvider = "AGY";
+    private string _chatModelIdentifier = "agy-pro";
+    private string _selectedRoleplayLlmProvider = "MistralVibe";
+    private string _roleplayModelIdentifier = "mistral-small";
     private double _temperature = 0.7;
     private int _maxTokens = 1024;
     private string _detectionStatus = "";
@@ -141,7 +164,7 @@
 
     private async Task DetectEngines()
     {
-        _detectionStatus = "🔍 Scanning local system for LLM engines...";
+        _detectionStatus = "🔍 Scanning local environment for AGY, Grok, Mistral & Ollama engines...";
         StateHasChanged();
 
         var engines = await LlmEngineDetector.DetectAvailableEnginesAsync();
@@ -153,15 +176,17 @@
             _llmProviderOptions.Add(new(eng.Id, $"{eng.DisplayName} ({status})"));
         }
 
-        var available = engines.Find(e => e.IsAvailable && e.Id != "MockEngine");
-        if (available != null)
+        var availableChat = engines.Find(e => e.IsAvailable && e.Id != "MockEngine");
+        if (availableChat != null)
         {
-            _selectedLlmProvider = available.Id;
-            _detectionStatus = $"✅ Auto-detected active engine: {available.DisplayName}";
+            _selectedChatLlmProvider = availableChat.Id;
+            _selectedRoleplayLlmProvider = availableChat.Id;
+            _detectionStatus = $"✅ Auto-detected active engine: {availableChat.DisplayName}";
         }
         else
         {
-            _selectedLlmProvider = "MockEngine";
+            _selectedChatLlmProvider = "MockEngine";
+            _selectedRoleplayLlmProvider = "MockEngine";
             _detectionStatus = "ℹ️ Offline mode: Mock LLM Engine active.";
         }
 

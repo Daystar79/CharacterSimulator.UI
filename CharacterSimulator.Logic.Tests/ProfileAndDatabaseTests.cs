@@ -117,6 +117,8 @@ public class ProfileAndDatabaseTests
     {
         var engines = await LlmEngineDetector.DetectAvailableEnginesAsync();
         Assert.NotEmpty(engines);
+        Assert.Contains(engines, e => e.Id == "AGY");
+        Assert.Contains(engines, e => e.Id == "Grok");
         Assert.Contains(engines, e => e.Id == "MockEngine" && e.IsAvailable);
     }
 }
