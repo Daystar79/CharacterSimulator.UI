@@ -80,6 +80,17 @@ public class ProfileService
         return true;
     }
 
+    public bool DeleteProfile(string profileId)
+    {
+        bool success = _profileRepo.DeleteProfile(profileId);
+        if (success && ActiveProfile?.Id == profileId)
+        {
+            var remaining = _profileRepo.GetAllProfiles();
+            ActiveProfile = remaining.Count > 0 ? remaining[0] : null;
+        }
+        return success;
+    }
+
     public ProfileRepository Profiles => _profileRepo;
     public SessionRepository Sessions => _sessionRepo;
     public CharacterProgressRepository Progress => _progressRepo;

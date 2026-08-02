@@ -43,6 +43,10 @@ public class ProfileAndDatabaseTests
 
             var all = repo.GetAllProfiles();
             Assert.Equal(2, all.Count);
+
+            bool deleted = repo.DeleteProfile(p1.Id);
+            Assert.True(deleted);
+            Assert.Single(repo.GetAllProfiles());
         }
         finally
         {

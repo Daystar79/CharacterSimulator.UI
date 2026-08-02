@@ -153,4 +153,13 @@ public class ProfileRepository
             32);
         return Convert.ToBase64String(hash);
     }
+
+    public bool DeleteProfile(string profileId)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM profiles WHERE id = @id;";
+        cmd.Parameters.AddWithValue("@id", profileId);
+        int rows = cmd.ExecuteNonQuery();
+        return rows > 0;
+    }
 }

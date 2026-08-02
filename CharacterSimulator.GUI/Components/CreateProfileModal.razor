@@ -15,12 +15,8 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Date of Birth (Year / Month / Day):</label>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
-                    <input type="number" class="form-control" min="1920" max="2026" @bind="_year" />
-                    <input type="number" class="form-control" min="1" max="12" @bind="_month" />
-                    <input type="number" class="form-control" min="1" max="31" @bind="_day" />
-                </div>
+                <label class="form-label">Date of Birth (Calendar Selector):</label>
+                <input type="date" class="form-control" @bind="_dob" min="1920-01-01" max="2026-12-31" />
                 <div style="font-size: 0.68rem; color: var(--text-muted);">* Age is calculated locally. Profiles under 18 have adult content paths locked.</div>
             </div>
 
@@ -50,9 +46,7 @@
     [Parameter] public EventCallback<bool> OnClosed { get; set; }
 
     private string _name = "Player 1";
-    private int _year = 2000;
-    private int _month = 1;
-    private int _day = 1;
+    private DateTime _dob = new DateTime(2000, 1, 1);
     private string _pin = "";
     private bool _adultAttest = false;
     private string _errorMessage = "";
@@ -67,7 +61,7 @@
 
         try
         {
-            var p = ProfileSvc.CreateProfile(_name.Trim(), _year, _month, _day, string.IsNullOrWhiteSpace(_pin) ? null : _pin.Trim(), _adultAttest);
+            var p = ProfileSvc.CreateProfile(_name.Trim(), _dob.Year, _dob.Month, _dob.Day, string.IsNullOrWhiteSpace(_pin) ? null : _pin.Trim(), _adultAttest);
             OnClosed.InvokeAsync(true);
         }
         catch (Exception ex)
