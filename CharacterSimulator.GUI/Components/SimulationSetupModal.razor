@@ -35,6 +35,37 @@
                 <CustomSelect @bind-Value="_mode" Options="_modeOptions" />
             </div>
 
+            <!-- AI LLM ENGINE CONFIGURATION SEGMENT -->
+            <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 0.75rem; margin-top: 0.75rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+                    <span>🤖</span>
+                    <span>AI LLM PROVIDER & ENGINE CONFIGURATION</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
+                    <div class="form-group">
+                        <label class="form-label">LLM Provider Engine:</label>
+                        <CustomSelect @bind-Value="_selectedLlmProvider" Options="_llmProviderOptions" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Model Identifier / Tag:</label>
+                        <input class="form-control" @bind="_modelIdentifier" placeholder="e.g. mistral-small, llama3.2" />
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.4rem;">
+                    <div class="form-group">
+                        <label class="form-label">Temperature: @_temperature.ToString("F1")</label>
+                        <input type="range" class="form-control" min="0.1" max="1.5" step="0.1" @bind="_temperature" style="padding: 0.2rem;" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max Response Tokens:</label>
+                        <input type="number" class="form-control" min="128" max="4096" step="128" @bind="_maxTokens" />
+                    </div>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.3rem;">* Local CLI wrappers & local API servers keep application execution 100% free with no paid tiers.</div>
+            </div>
+
             @if (!string.IsNullOrEmpty(_warningMessage))
             {
                 <div style="color: var(--accent-amber); font-size: 0.72rem; font-weight: 600; margin-top: 0.4rem;">@_warningMessage</div>
@@ -70,11 +101,22 @@
         new("PlayerGuided", "🎮 Player-Guided Mode (Human Prompt Injected)")
     };
 
+    private List<CustomSelect.DropdownOption> _llmProviderOptions = new()
+    {
+        new("MistralVibe", "⚡ Mistral Vibe (Local CLI - Free)"),
+        new("Ollama", "🦙 Ollama API (http://localhost:11434)"),
+        new("MockEngine", "🧪 Mock LLM Engine (Offline Test)")
+    };
+
     private string _selectedCharA = "";
     private string _selectedCharB = "";
     private string _selectedGenre = "Contemporary";
     private string _sceneContext = "Quiet city apartment at midnight during a rainstorm.";
     private string _mode = "PlayerGuided";
+    private string _selectedLlmProvider = "MistralVibe";
+    private string _modelIdentifier = "mistral-small";
+    private double _temperature = 0.7;
+    private int _maxTokens = 1024;
     private string _warningMessage = "";
 
     protected override void OnInitialized()
