@@ -1,0 +1,46 @@
+<div class="custom-dropdown-container">
+    <button type="button" class="custom-dropdown-button" @onclick="Toggle">
+        <span>@(GetLabel(Value))</span>
+        <span style="font-size: 0.7rem; color: var(--text-muted);">▾</span>
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="custom-dropdown-menu">
+            @foreach (var opt in Options)
+            {
+                <div class="custom-dropdown-item @(opt.Value == Value ? "active" : "")" @onclick="() => Select(opt.Value)">
+                    @opt.Label
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    public record DropdownOption(string Value, string Label);
+
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public List<DropdownOption> Options { get; set; } = new();
+
+    private bool _isOpen = false;
+
+    private void Toggle()
+    {
+        _isOpen = !_isOpen;
+    }
+
+    private void Select(string val)
+    {
+        _isOpen = false;
+        Value = val;
+        ValueChanged.InvokeAsync(val);
+    }
+
+    private string GetLabel(string val)
+    {
+        var opt = Options.FirstOrDefault(o => o.Value == val);
+        return opt != null ? opt.Label : (string.IsNullOrEmpty(val) ? "(None / Not Selected)" : val);
+    }
+}

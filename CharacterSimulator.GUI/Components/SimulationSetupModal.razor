@@ -12,35 +12,17 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                 <div class="form-group">
                     <label class="form-label">Character A (First Speaker):</label>
-                    <select class="form-control" @bind="_selectedCharA">
-                        <option value="">(None / Not Selected)</option>
-                        @foreach (var c in _availableCharacters)
-                        {
-                            <option value="@c">@c</option>
-                        }
-                    </select>
+                    <CustomSelect @bind-Value="_selectedCharA" Options="_characterOptions" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Character B (Second Speaker):</label>
-                    <select class="form-control" @bind="_selectedCharB">
-                        <option value="">(None / Not Selected)</option>
-                        @foreach (var c in _availableCharacters)
-                        {
-                            <option value="@c">@c</option>
-                        }
-                    </select>
+                    <CustomSelect @bind-Value="_selectedCharB" Options="_characterOptions" />
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Simulation Genre:</label>
-                <select class="form-control" @bind="_selectedGenre">
-                    <option value="Contemporary">Contemporary</option>
-                    <option value="Cyberpunk">Cyberpunk</option>
-                    <option value="Sci-Fi">Sci-Fi</option>
-                    <option value="Fantasy">Fantasy</option>
-                    <option value="Noir">Noir</option>
-                </select>
+                <CustomSelect @bind-Value="_selectedGenre" Options="_genreOptions" />
             </div>
 
             <div class="form-group">
@@ -50,10 +32,7 @@
 
             <div class="form-group">
                 <label class="form-label">Execution Mode:</label>
-                <select class="form-control" @bind="_mode">
-                    <option value="AutoPlay">🤖 Auto-Play Mode (Autonomous AI Roleplay)</option>
-                    <option value="PlayerGuided">🎮 Player-Guided Mode (Human Prompt Injected)</option>
-                </select>
+                <CustomSelect @bind-Value="_mode" Options="_modeOptions" />
             </div>
 
             @if (!string.IsNullOrEmpty(_warningMessage))
@@ -71,7 +50,26 @@
 @code {
     [Parameter] public EventCallback<bool> OnClosed { get; set; }
 
-    private List<string> _availableCharacters = new();
+    private List<CustomSelect.DropdownOption> _characterOptions = new()
+    {
+        new("", "(None / Not Selected)")
+    };
+
+    private List<CustomSelect.DropdownOption> _genreOptions = new()
+    {
+        new("Contemporary", "Contemporary"),
+        new("Cyberpunk", "Cyberpunk"),
+        new("Sci-Fi", "Sci-Fi"),
+        new("Fantasy", "Fantasy"),
+        new("Noir", "Noir")
+    };
+
+    private List<CustomSelect.DropdownOption> _modeOptions = new()
+    {
+        new("AutoPlay", "🤖 Auto-Play Mode (Autonomous AI Roleplay)"),
+        new("PlayerGuided", "🎮 Player-Guided Mode (Human Prompt Injected)")
+    };
+
     private string _selectedCharA = "";
     private string _selectedCharB = "";
     private string _selectedGenre = "Contemporary";
@@ -82,9 +80,10 @@
     protected override void OnInitialized()
     {
         var catalog = CharacterCatalog.ListCardFileNames();
-        if (catalog.Count > 0)
+        _characterOptions = new List<CustomSelect.DropdownOption> { new("", "(None / Not Selected)") };
+        foreach (var c in catalog)
         {
-            _availableCharacters = catalog;
+            _characterOptions.Add(new(c, c));
         }
     }
 
