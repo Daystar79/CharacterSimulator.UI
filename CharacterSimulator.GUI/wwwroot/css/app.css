@@ -706,3 +706,69 @@ body, html {
     border-color: var(--accent-blue);
     outline: none;
 }
+
+/* TABBED LEFT PANEL STYLING */
+.panel-tabs-header {
+    display: flex;
+    gap: 0.3rem;
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.panel-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.4rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.panel-tab-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.panel-tab-btn.active {
+    background: var(--accent-blue);
+    color: #ffffff !important;
+}
+
+/* OUTPUT LOG TERMINAL STYLING */
+.output-log-container {
+    background: #090d16;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    height: 100%;
+    min-height: 480px;
+    max-height: 600px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.log-entry {
+    line-height: 1.4;
+    word-break: break-all;
+}
+
+.log-time {
+    color: var(--text-muted);
+    margin-right: 0.4rem;
+}
+
+.log-info { color: #38bdf8; }
+.log-success { color: #34d399; }
+.log-warning { color: #fbbf24; }
+.log-error { color: #f87171; }
