@@ -7,8 +7,10 @@ namespace CharacterSimulator.Logic;
 public class AppSettings
 {
     public bool IsConfigured { get; set; } = false;
-    public string SelectedCharA { get; set; } = "serena.md";
-    public string SelectedCharB { get; set; } = "None (Solo Roleplay)";
+    /// <summary>Opaque card filename (e.g. a1b2c3d4e5f60718.json), not the display name.</summary>
+    public string SelectedCharA { get; set; } = "";
+    /// <summary>Opaque card filename, empty for solo, or legacy "None (Solo Roleplay)".</summary>
+    public string SelectedCharB { get; set; } = "";
     public string SelectedLlmA { get; set; } = "Mock";
     public string SelectedLlmB { get; set; } = "Mock";
     public string SelectedGenre { get; set; } = SceneGenreCatalog.DefaultGenreId;

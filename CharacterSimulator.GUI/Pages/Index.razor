@@ -4,15 +4,12 @@
 
 <div class="workspace-grid">
     
-    <!-- LEFT PANEL: 3 TABS (SCENE IMAGE / HISTORY / SYSTEM OUTPUT) -->
+    <!-- LEFT PANEL: 2 TABS (SCENE IMAGE / SYSTEM OUTPUT) -->
     <div class="character-panel">
         <!-- TAB HEADER -->
         <div class="panel-tabs-header">
             <button class="panel-tab-btn @(_leftPanelTab == "Scene" ? "active" : "")" @onclick='() => _leftPanelTab = "Scene"'>
                 🖼️ SCENE IMAGE
-            </button>
-            <button class="panel-tab-btn @(_leftPanelTab == "History" ? "active" : "")" @onclick='() => _leftPanelTab = "History"'>
-                📜 HISTORY
             </button>
             <button class="panel-tab-btn @(_leftPanelTab == "System" ? "active" : "")" @onclick='() => _leftPanelTab = "System"'>
                 ⚙️ SYSTEM OUTPUT
@@ -23,7 +20,7 @@
         {
             <!-- SCENE IMAGE VIEW -->
             <div class="portrait-container">
-                @if (!string.IsNullOrEmpty(_sceneImagePath) && (System.IO.File.Exists(_sceneImagePath) || _sceneImagePath.StartsWith("http")))
+                @if (!string.IsNullOrEmpty(_sceneImagePath) && (System.IO.File.Exists(_sceneImagePath) || _sceneImagePath.StartsWith("http") || _sceneImagePath.StartsWith("data:")))
                 {
                     <img class="portrait-img" src="@_sceneImagePath" alt="Scene Location" style="aspect-ratio: 16/9; object-fit: cover;" />
                 }
@@ -48,32 +45,6 @@
                 <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
                     Contemporary urban apartment setting. Soft neon reflections on wet glass window panes.
                 </div>
-            </div>
-        }
-        else if (_leftPanelTab == "History")
-        {
-            <!-- SESSION TURN HISTORY VIEW -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <span class="section-title" style="margin: 0; color: var(--accent-blue);">📜 SESSION HISTORY LOG</span>
-                <span style="font-size: 0.68rem; color: var(--text-muted);">Turns: @_dialogueFeed.Count</span>
-            </div>
-            <div class="output-log-container">
-                @for (int i = 0; i < _dialogueFeed.Count; i++)
-                {
-                    var turn = _dialogueFeed[i];
-                    <div style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
-                        <div style="font-weight: 700; color: @turn.SpeakerColor; font-size: 0.7rem;">
-                            Turn #@(i + 1): @turn.SpeakerName @(turn.IsSystem ? "" : $"➔ {turn.TargetName}")
-                        </div>
-                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.15rem;">
-                            @turn.Dialogue
-                        </div>
-                        @if (!string.IsNullOrEmpty(turn.BondDeltaText))
-                        {
-                            <div style="font-size: 0.65rem; color: var(--accent-purple); margin-top: 0.1rem;">🔗 @turn.BondDeltaText</div>
-                        }
-                    </div>
-                }
             </div>
         }
         else
@@ -135,9 +106,12 @@
             <button class="panel-tab-btn @(_rightPanelTab == "CharA" ? "active" : "")" @onclick='() => _rightPanelTab = "CharA"'>
                 👤 CHARACTER A
             </button>
-            <button class="panel-tab-btn @(_rightPanelTab == "CharB" ? "active" : "")" @onclick='() => _rightPanelTab = "CharB"'>
-                👤 CHARACTER B
-            </button>
+            @if (_isCharBLoaded || _rightPanelTab == "CharB")
+            {
+                <button class="panel-tab-btn @(_rightPanelTab == "CharB" ? "active" : "")" @onclick='() => _rightPanelTab = "CharB"'>
+                    @(_isCharBLoaded ? "👤 CHARACTER B" : "➕ ADD CHARACTER B")
+                </button>
+            }
             <button class="panel-tab-btn @(_rightPanelTab == "History" ? "active" : "")" @onclick='() => _rightPanelTab = "History"'>
                 📜 HISTORY
             </button>
@@ -166,7 +140,7 @@
                 {
                     <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a;">
                         <div class="portrait-container">
-                            @if (!string.IsNullOrEmpty(_charAAvatarPath) && (System.IO.File.Exists(_charAAvatarPath) || _charAAvatarPath.StartsWith("http")))
+                            @if (!string.IsNullOrEmpty(_charAAvatarPath) && (System.IO.File.Exists(_charAAvatarPath) || _charAAvatarPath.StartsWith("http") || _charAAvatarPath.StartsWith("data:")))
                             {
                                 <img class="portrait-img" src="@_charAAvatarPath" alt="@_charAName" />
                             }
@@ -177,7 +151,7 @@
                                     <div class="canvas-char-name">@_charAName @(_charAAge > 0 ? $"({_charAAge})" : "")</div>
                                 </div>
                             }
-                            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot A")'>✨ Generate AI Art</button>
+                            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot A", _charAPhysical)'>✨ Generate AI Art</button>
                         </div>
 
                         <!-- DESCRIPTION -->
@@ -268,7 +242,7 @@
                 {
                     <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a;">
                         <div class="portrait-container">
-                            @if (!string.IsNullOrEmpty(_charBAvatarPath) && (System.IO.File.Exists(_charBAvatarPath) || _charBAvatarPath.StartsWith("http")))
+                            @if (!string.IsNullOrEmpty(_charBAvatarPath) && (System.IO.File.Exists(_charBAvatarPath) || _charBAvatarPath.StartsWith("http") || _charBAvatarPath.StartsWith("data:")))
                             {
                                 <img class="portrait-img" src="@_charBAvatarPath" alt="@_charBName" />
                             }
@@ -279,7 +253,7 @@
                                     <div class="canvas-char-name">@_charBName @(_charBAge > 0 ? $"({_charBAge})" : "")</div>
                                 </div>
                             }
-                            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot B")'>✨ Generate AI Art</button>
+                            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot B", _charBPhysical)'>✨ Generate AI Art</button>
                         </div>
 
                         <!-- DESCRIPTION -->
@@ -379,7 +353,7 @@
 
 @if (_showGeneratePortraitModal)
 {
-    <GeneratePortraitModal SlotName="@_targetPortraitSlot" OnPortraitGenerated="OnPortraitGenerated" />
+    <GeneratePortraitModal SlotName="@_targetPortraitSlot" CharacterAppearance="@_portraitAppearance" OnPortraitGenerated="OnPortraitGenerated" />
 }
 
 @implements IDisposable
@@ -425,6 +399,8 @@
 
     private void SelectCharacterCard(string slot, string fileName)
     {
+        bool charBWasLoaded = _isCharBLoaded;
+        
         if (slot == "Slot A")
         {
             _selectedCharAFile = fileName;
@@ -438,8 +414,11 @@
             _charASkills = info.Skills;
             _charAStress = 15;
             _charAArousal = 10;
-            _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = $"Loaded Character A card: {info.Name} ({fileName})", LevelClass = "log-success" });
-            _dialogueFeed.Add(new ChatMessageModel { SpeakerName = "System", Dialogue = $"🎭 {info.Name} loaded into Character A slot.", IsSystem = true });
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = $"Loaded Character A card: {info.Name} ({fileName})", LevelClass = "log-success" });
+                _dialogueFeed.Add(new ChatMessageModel { SpeakerName = "System", Dialogue = $"🎭 {info.Name} loaded into Character A slot.", IsSystem = true });
+            }
         }
         else
         {
@@ -454,9 +433,31 @@
             _charBSkills = info.Skills;
             _charBStress = 20;
             _charBArousal = 15;
-            _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = $"Loaded Character B card: {info.Name} ({fileName})", LevelClass = "log-success" });
-            _dialogueFeed.Add(new ChatMessageModel { SpeakerName = "System", Dialogue = $"🎭 {info.Name} loaded into Character B slot.", IsSystem = true });
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = $"Loaded Character B card: {info.Name} ({fileName})", LevelClass = "log-success" });
+                _dialogueFeed.Add(new ChatMessageModel { SpeakerName = "System", Dialogue = $"🎭 {info.Name} loaded into Character B slot.", IsSystem = true });
+            }
         }
+        
+        // Handle tab switching
+        if (!string.IsNullOrEmpty(fileName))
+        {
+            // Loading a character - switch to its tab
+            if (slot == "Slot A")
+                _rightPanelTab = "CharA";
+            else if (slot == "Slot B")
+                _rightPanelTab = "CharB";
+        }
+        else
+        {
+            // Unloading a character - switch away from its tab
+            if (slot == "Slot A" && _rightPanelTab == "CharA")
+                _rightPanelTab = "History";
+            if (slot == "Slot B" && _rightPanelTab == "CharB")
+                _rightPanelTab = "History";
+        }
+        
         StateHasChanged();
     }
 
@@ -502,19 +503,20 @@
         ControlContext.OnUIUpdated += OnBackgroundAutoRefresh;
         ControlContext.OnSettingsChanged += OnSettingsUpdated;
 
-        var catalog = CharacterCatalog.ListCardFileNames();
+        var catalog = CharacterCatalog.ListCards();
         _characterDropdownOptions = new List<CustomSelect.DropdownOption>
         {
             new("", "(No Character Selected)")
         };
         foreach (var card in catalog)
         {
-            _characterDropdownOptions.Add(new(card, card));
+            // Value = opaque filename; Label = name from card JSON
+            _characterDropdownOptions.Add(new(card.FileName, card.DisplayName));
         }
 
         if (catalog.Count > 0)
         {
-            SelectCharacterCard("Slot A", catalog[0]);
+            SelectCharacterCard("Slot A", catalog[0].FileName);
         }
 
         if (ControlContext.CurrentSettings != null)
@@ -547,14 +549,14 @@
     {
         InvokeAsync(() =>
         {
-            var catalog = CharacterCatalog.ListCardFileNames();
+            var catalog = CharacterCatalog.ListCards();
             _characterDropdownOptions = new List<CustomSelect.DropdownOption>
             {
                 new("", "(No Character Selected)")
             };
             foreach (var card in catalog)
             {
-                _characterDropdownOptions.Add(new(card, card));
+                _characterDropdownOptions.Add(new(card.FileName, card.DisplayName));
             }
 
             if (!string.IsNullOrEmpty(_selectedCharAFile))
@@ -578,9 +580,12 @@
         });
     }
 
-    private void OpenGeneratePortraitModal(string slotName)
+    private string _portraitAppearance = "";
+
+    private void OpenGeneratePortraitModal(string slotName, string appearance)
     {
         _targetPortraitSlot = slotName;
+        _portraitAppearance = appearance;
         _showGeneratePortraitModal = true;
     }
 

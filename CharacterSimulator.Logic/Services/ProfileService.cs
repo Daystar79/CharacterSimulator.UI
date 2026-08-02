@@ -6,10 +6,11 @@ using Microsoft.Data.Sqlite;
 
 namespace CharacterSimulator.Logic.Services;
 
-public class ProfileService
+public class ProfileService : IDisposable
 {
     private static readonly object SyncLock = new();
     private static ProfileService? _instance;
+    private bool _disposed = false;
 
     public static ProfileService Instance
     {
@@ -45,6 +46,29 @@ public class ProfileService
         _progressRepo = new CharacterProgressRepository(_conn);
 
         EnsureDefaultProfileExists();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                try { _conn?.Dispose(); } catch { }
+            }
+            _disposed = true;
+        }
+    }
+
+    ~ProfileService()
+    {
+        Dispose(false);
     }
 
     private void EnsureDefaultProfileExists()

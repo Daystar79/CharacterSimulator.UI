@@ -8,7 +8,7 @@
             <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
         </div>
         <div class="modal-body">
-            <p style="font-size: 0.75rem; color: var(--text-secondary);">Generate a custom AI portrait for character slot <b>@SlotName</b> using Pollinations AI (Free API).</p>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Generate a custom AI portrait for character slot <b>@SlotName</b> using Pollinations AI (Free Web API - No Setup Required).</p>
 
             <div class="form-group">
                 <label class="form-label">Image Generation Engine / Model:</label>
@@ -54,22 +54,33 @@
 @code {
     [Parameter] public string SlotName { get; set; } = "Slot A";
     [Parameter] public EventCallback<string> OnPortraitGenerated { get; set; }
+    [Parameter] public string CharacterAppearance { get; set; } = "";
 
     private List<CustomSelect.DropdownOption> _engineOptions = new()
     {
-        new("PollinationsAI", "✨ Pollinations AI (Free Neural Renderer)"),
+        new("PollinationsAI", "✨ Pollinations AI (Free Web API - No Setup Required)"),
         new("OllamaLocal", "🦙 Ollama / Multimodal Vision LLM (Local)"),
         new("StableDiffusionWebUI", "🎨 Stable Diffusion WebUI (http://localhost:7860)")
     };
 
     private string _selectedEngine = "PollinationsAI";
-    private string _prompt = "Cyberpunk security officer female with glowing cyan visor, high quality detailed digital art";
+    private string _prompt = "";
     private bool _isGenerating = false;
     private string _generatedImagePath = "";
     private string _errorMessage = "";
 
-    protected override void OnInitialized()
+    protected override void OnParametersSet()
     {
+        // Set prompt from character appearance, with fallback
+        if (!string.IsNullOrEmpty(CharacterAppearance))
+        {
+            _prompt = CharacterAppearance;
+        }
+        else if (string.IsNullOrEmpty(_prompt))
+        {
+            _prompt = "Character portrait, high quality detailed artwork";
+        }
+
         if (ControlContext?.CurrentSettings != null && !string.IsNullOrEmpty(ControlContext.CurrentSettings.ImageEngine))
         {
             _selectedEngine = ControlContext.CurrentSettings.ImageEngine;

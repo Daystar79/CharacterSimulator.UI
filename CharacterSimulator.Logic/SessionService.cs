@@ -17,18 +17,35 @@ public class RoleplaySessionData
 
 public static class SessionService
 {
-    public static void SaveSession(string path, RoleplaySessionData sessionData)
+    public static bool SaveSession(string path, RoleplaySessionData sessionData)
     {
-        var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        var json = JsonSerializer.Serialize(sessionData, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(path, json);
+        try
+        {
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            var json = JsonSerializer.Serialize(sessionData, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SessionService] Failed to save session: {ex.Message}");
+            return false;
+        }
     }
 
     public static RoleplaySessionData? LoadSession(string path)
     {
-        if (!File.Exists(path)) return null;
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<RoleplaySessionData>(json);
+        try
+        {
+            if (!File.Exists(path)) return null;
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<RoleplaySessionData>(json);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SessionService] Failed to load session from {path}: {ex.Message}");
+            return null;
+        }
     }
 }

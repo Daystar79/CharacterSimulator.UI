@@ -97,7 +97,7 @@
                     </div>
 
                     <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; margin-top: 0.4rem;">
-                        * Pollinations AI runs 100% free with no keys required.<br/>
+                        * Pollinations AI runs 100% free with no keys or setup required.<br/>
                         * Local Ollama Vision and SD WebUI require local services running on ports 11434 / 7860.
                     </div>
                 </div>
@@ -155,7 +155,7 @@
 
     private List<CustomSelect.DropdownOption> _imageEngineOptions = new()
     {
-        new("PollinationsAI", "✨ Pollinations AI (Free Neural Renderer)"),
+        new("PollinationsAI", "✨ Pollinations AI (Free Web API - No Setup Required)"),
         new("OllamaLocal", "🦙 Ollama Vision / Multimodal (Local)"),
         new("StableDiffusionWebUI", "🎨 Stable Diffusion WebUI (http://localhost:7860)")
     };
@@ -176,11 +176,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var catalog = CharacterCatalog.ListCardFileNames();
+        var catalog = CharacterCatalog.ListCards();
         _characterOptions = new List<CustomSelect.DropdownOption> { new("", "(None / Not Selected)") };
-        foreach (var c in catalog)
+        foreach (var card in catalog)
         {
-            _characterOptions.Add(new(c, c));
+            // Value = opaque filename (card id); Label = name from card body
+            _characterOptions.Add(new(card.FileName, card.DisplayName));
         }
 
         var saved = AppConfigService.LoadSettings();

@@ -116,7 +116,7 @@ public class Character
 
     public bool EvaluateSuccess(Goal goal, Character targetCharacter)
     {
-        if (string.IsNullOrEmpty(goal.SuccessCondition)) return false;
+        if (goal == null || string.IsNullOrEmpty(goal.SuccessCondition)) return false;
         if (goal.SuccessCondition.Contains("bond >="))
         {
             var match = Regex.Match(goal.SuccessCondition, @"bond >= (\d+)");
@@ -131,7 +131,7 @@ public class Character
 
     public bool EvaluateFailure(Goal goal, Character targetCharacter)
     {
-        if (string.IsNullOrEmpty(goal.FailureCondition)) return false;
+        if (goal == null || string.IsNullOrEmpty(goal.FailureCondition) || targetCharacter == null) return false;
         if (goal.FailureCondition.Contains("bond <"))
         {
             var match = Regex.Match(goal.FailureCondition, @"bond < (\d+)");

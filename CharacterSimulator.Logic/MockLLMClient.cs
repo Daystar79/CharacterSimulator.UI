@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CharacterSimulator.Logic;
 
@@ -160,5 +162,11 @@ public class MockLLMClient : ILLMClient
         // Stable-ish variety without coupling to scene genre
         int idx = Math.Abs((character.Name + character.Bond).GetHashCode() + _rng.Next(lines.Length * 3)) % lines.Length;
         return lines[idx];
+    }
+    
+    public Task<string> SendPromptAsync(Character character, string input, string sceneContext, string goalContext = "", CancellationToken ct = default)
+    {
+        // Mock client is synchronous and fast, so just return completed task
+        return Task.FromResult(SendPrompt(character, input, sceneContext, goalContext));
     }
 }

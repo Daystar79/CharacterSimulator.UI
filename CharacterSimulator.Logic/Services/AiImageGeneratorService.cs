@@ -14,10 +14,19 @@ public enum ImageGeneratorEngine
 
 public class AiImageGeneratorService
 {
-    private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+    private static readonly HttpClient _httpClient = new HttpClient
+    {
+        Timeout = TimeSpan.FromSeconds(60)
+    };
+
+    static AiImageGeneratorService()
+    {
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    }
 
     /// <summary>
     /// Generates a character portrait using the selected image generator engine.
+    /// Returns a base64 data URI (data:image/jpeg;base64,...) or direct HTTP image URL for 100% reliable WebView rendering.
     /// </summary>
     public static async Task<string> GeneratePortraitAsync(string prompt, string characterSlug, ImageGeneratorEngine engine = ImageGeneratorEngine.PollinationsAI)
     {
@@ -32,7 +41,13 @@ public class AiImageGeneratorService
             Directory.CreateDirectory(targetDir);
         }
 
-        string localPath = Path.Combine(targetDir, $"{characterSlug.Replace(".md", "")}.jpg");
+        // characterSlug may be a display name, card id, or filename — normalize to a file stem.
+        string stem = Path.GetFileNameWithoutExtension(characterSlug);
+        if (string.IsNullOrWhiteSpace(stem))
+            stem = "portrait";
+        foreach (var ch in Path.GetInvalidFileNameChars())
+            stem = stem.Replace(ch, '_');
+        string localPath = Path.Combine(targetDir, $"{stem}.jpg");
 
         if (engine == ImageGeneratorEngine.PollinationsAI)
         {
@@ -42,13 +57,18 @@ public class AiImageGeneratorService
             try
             {
                 byte[] imageBytes = await _httpClient.GetByteArrayAsync(imageUrl);
-                await File.WriteAllBytesAsync(localPath, imageBytes);
-                return localPath;
+                if (imageBytes != null && imageBytes.Length > 0)
+                {
+                    await File.WriteAllBytesAsync(localPath, imageBytes);
+                    string base64 = Convert.ToBase64String(imageBytes);
+                    return $"data:image/jpeg;base64,{base64}";
+                }
             }
             catch
             {
-                return imageUrl; // Fallback to direct web URL
+                // Fallback to direct URL if download/save failed
             }
+            return imageUrl;
         }
         else if (engine == ImageGeneratorEngine.StableDiffusionWebUI)
         {
@@ -58,12 +78,17 @@ public class AiImageGeneratorService
                 string cleanPrompt = Uri.EscapeDataString($"{prompt}, high quality character portrait");
                 string fallbackUrl = $"https://image.pollinations.ai/prompt/{cleanPrompt}?width=512&height=512&nologo=true";
                 byte[] imageBytes = await _httpClient.GetByteArrayAsync(fallbackUrl);
-                await File.WriteAllBytesAsync(localPath, imageBytes);
-                return localPath;
+                if (imageBytes != null && imageBytes.Length > 0)
+                {
+                    await File.WriteAllBytesAsync(localPath, imageBytes);
+                    string base64 = Convert.ToBase64String(imageBytes);
+                    return $"data:image/jpeg;base64,{base64}";
+                }
+                return fallbackUrl;
             }
             catch
             {
-                return localPath;
+                return $"https://image.pollinations.ai/prompt/{Uri.EscapeDataString(prompt)}?width=512&height=512&nologo=true";
             }
         }
         else
@@ -74,13 +99,15 @@ public class AiImageGeneratorService
             try
             {
                 byte[] imageBytes = await _httpClient.GetByteArrayAsync(imageUrl);
-                await File.WriteAllBytesAsync(localPath, imageBytes);
-                return localPath;
+                if (imageBytes != null && imageBytes.Length > 0)
+                {
+                    await File.WriteAllBytesAsync(localPath, imageBytes);
+                    string base64 = Convert.ToBase64String(imageBytes);
+                    return $"data:image/jpeg;base64,{base64}";
+                }
             }
-            catch
-            {
-                return imageUrl;
-            }
+            catch { }
+            return imageUrl;
         }
     }
 }

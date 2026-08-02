@@ -15,39 +15,58 @@ public class TerminalUi
         AnsiConsole.Clear();
         RenderHeader();
 
-        // 1. Discover Character cards (CharacterSimulator cast)
+        // 1. Discover Character cards (opaque file ids; labels from card name field)
         string charDir = CharacterCatalog.ResolveCharactersDirectory();
-        var fileOptions = CharacterCatalog.ListCardFileNames();
+        var cards = CharacterCatalog.ListCards();
 
-        if (fileOptions.Count == 0)
+        if (cards.Count == 0)
         {
             AnsiConsole.MarkupLine("[bold red]No character files found in Characters/ folder![/]");
             return;
         }
 
+        // Map selector labels (display name) -> filename. Disambiguate duplicate names with short id.
+        var labelCounts = cards.GroupBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+        string LabelFor(CharacterCatalog.CharacterCardRef c) =>
+            labelCounts[c.DisplayName] > 1
+                ? $"{c.DisplayName} ({c.CardId[..Math.Min(8, c.CardId.Length)]})"
+                : c.DisplayName;
+
+        var labelToFile = cards.ToDictionary(LabelFor, c => c.FileName, StringComparer.OrdinalIgnoreCase);
+        var labelOptions = cards.Select(LabelFor).ToList();
+
         // 2. Interactive Character Selection
-        var charAFile = AnsiConsole.Prompt(
+        var charALabel = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[bold cyan]Select Character 1 (Player A):[/]")
                 .PageSize(12)
-                .AddChoices(fileOptions));
+                .AddChoices(labelOptions));
+        string charAFile = labelToFile[charALabel];
+        string charADisplay = CharacterCatalog.GetCharacterDisplayName(charAFile);
 
-        var charBOptions = new List<string> { "None (Solo Roleplay)" };
-        charBOptions.AddRange(fileOptions.Where(f => f != charAFile));
-        if (charBOptions.Count == 1) charBOptions.AddRange(fileOptions);
+        var charBLabelOptions = new List<string> { "None (Solo Roleplay)" };
+        charBLabelOptions.AddRange(labelOptions.Where(l => l != charALabel));
+        if (charBLabelOptions.Count == 1) charBLabelOptions.AddRange(labelOptions);
 
-        var charBFile = AnsiConsole.Prompt(
+        var charBLabel = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[bold magenta]Select Character 2 (Player B):[/]")
                 .PageSize(12)
-                .AddChoices(charBOptions));
+                .AddChoices(charBLabelOptions));
+        string charBFile = charBLabel.StartsWith("None", StringComparison.OrdinalIgnoreCase)
+            ? charBLabel
+            : labelToFile[charBLabel];
+        string charBDisplay = charBFile.StartsWith("None", StringComparison.OrdinalIgnoreCase)
+            ? "Solo"
+            : CharacterCatalog.GetCharacterDisplayName(charBFile);
 
         // 3. Interactive System LLM Discovery Selection
         var llmOptions = LlmDiscoveryService.GetAvailableProviderNames();
 
         var clientChoiceA = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title($"[bold cyan]Select Installed LLM Provider for {Path.GetFileNameWithoutExtension(charAFile)}:[/]")
+                .Title($"[bold cyan]Select Installed LLM Provider for {charADisplay}:[/]")
                 .AddChoices(llmOptions));
 
         string clientChoiceB = clientChoiceA;
@@ -55,7 +74,7 @@ public class TerminalUi
         {
             clientChoiceB = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[bold magenta]Select Installed LLM Provider for {Path.GetFileNameWithoutExtension(charBFile)}:[/]")
+                    .Title($"[bold magenta]Select Installed LLM Provider for {charBDisplay}:[/]")
                     .AddChoices(llmOptions));
         }
 

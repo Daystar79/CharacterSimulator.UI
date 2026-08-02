@@ -42,7 +42,7 @@ public class TurnManager
         OnSceneStarted?.Invoke(scene);
 
         bool isSoloMode = charB == null || string.Equals(charB.Name, "None", StringComparison.OrdinalIgnoreCase);
-        string targetBName = isSoloMode ? "Player" : charB!.Name;
+        string targetBName = isSoloMode ? "Player" : (charB?.Name ?? "Unknown");
 
         charA.ResistanceCount[targetBName] = 0;
         if (!isSoloMode && charB != null) charB.ResistanceCount[charA.Name] = 0;
@@ -75,7 +75,19 @@ public class TurnManager
                 OnAgentTurnStarted?.Invoke(charA.Name, providerA);
                 OnAgentOutputLogged?.Invoke($"[⏳ {charA.Name}] Dispatching prompt to {providerA}...\n");
 
-                string promptA = await Task.Run(() => _clientA.SendPrompt(charA, inputA, scene, goalContextA));
+                string promptA;
+                try
+                {
+                    promptA = await _clientA.SendPromptAsync(charA, inputA, scene, goalContextA, controlContext.CancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (controlContext.CancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    promptA = $"[CLI ERROR] Exception in {providerA}: {ex.Message}";
+                }
                 if (controlContext.CancellationToken.IsCancellationRequested) break;
 
                 OnAgentOutputLogged?.Invoke($"[{charA.Name} RAW LLM STDOUT]\n{promptA}\n");
@@ -200,7 +212,19 @@ public class TurnManager
                 OnAgentTurnStarted?.Invoke(charB.Name, providerB);
                 OnAgentOutputLogged?.Invoke($"[⏳ {charB.Name}] Dispatching prompt to {providerB}...\n");
 
-                string promptB = await Task.Run(() => _clientB.SendPrompt(charB, inputB, scene, goalContextB));
+                string promptB;
+                try
+                {
+                    promptB = await _clientB.SendPromptAsync(charB, inputB, scene, goalContextB, controlContext.CancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (controlContext.CancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    promptB = $"[CLI ERROR] Exception in {providerB}: {ex.Message}";
+                }
                 if (controlContext.CancellationToken.IsCancellationRequested) break;
 
                 OnAgentOutputLogged?.Invoke($"[{charB.Name} RAW LLM STDOUT]\n{promptB}\n");
@@ -296,7 +320,7 @@ public class TurnManager
                 }
 
                 foreach (var goal in charA.Goals) if (goal.CooldownRemaining > 0) goal.CooldownRemaining--;
-                foreach (var goal in charB.Goals) if (goal.CooldownRemaining > 0) goal.CooldownRemaining--;
+                if (charB != null) foreach (var goal in charB.Goals) if (goal.CooldownRemaining > 0) goal.CooldownRemaining--;
 
                 lastInputForA = dialogueB;
 
@@ -310,6 +334,10 @@ public class TurnManager
         }
     }
 
+    /// <summary>
+    /// Synchronous version for backward compatibility. Note: This blocks the calling thread.
+    /// Consider using RunConversationAsync for UI applications to avoid thread pool starvation.
+    /// </summary>
     public void RunConversation(Character charA, Character? charB, string scene, int maxTurns)
     {
         var dummyContext = new TurnControlContext();
@@ -336,6 +364,8 @@ public class TurnManager
 
     private (string Dialogue, List<string> SomaticZones, int BondDelta, string GoalStatus, string? ImagePrompt, State.PsychosomaticStateSnapshot? LiveState) ParseResponse(string response, Character character)
     {
+        if (character == null) character = new Character { Name = "Unknown" };
+        
         var somaticMatch = Regex.Match(response, @"\[Somatic: (.*?)\]");
         var somaticZones = somaticMatch.Success ?
             somaticMatch.Groups[1].Value.Split(',').Select(s => s.Trim()).ToList() :
