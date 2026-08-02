@@ -35,42 +35,42 @@
                 <CustomSelect @bind-Value="_mode" Options="_modeOptions" />
             </div>
 
-            <!-- AI LLM ENGINE CONFIGURATION SEGMENT -->
+            <!-- AI ENGINE & IMAGE GENERATOR CONFIGURATION SEGMENT -->
             <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 0.75rem; margin-top: 0.75rem;">
                 <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <span>🤖</span>
-                        <span>AI LLM PROVIDER & ENGINE CONFIGURATION</span>
+                        <span>AI ROLEPLAY & IMAGE GENERATION ENGINES</span>
                     </div>
                     <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="DetectEngines">🔍 Auto-Detect Engines</button>
                 </div>
 
-                <!-- SECTION 1: CHAT & SYSTEM ENGINE -->
+                <!-- SECTION 1: ROLEPLAY & DIALOGUE LLM ENGINE -->
                 <div style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.3rem;">💬 1. CHAT & SYSTEM ENGINE (Player Prompts & Orchestration)</div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.3rem;">🎭 1. ROLEPLAY & DIALOGUE LLM ENGINE</div>
                     <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 0.68rem;">Chat Provider Engine:</label>
-                            <CustomSelect @bind-Value="_selectedChatLlmProvider" Options="_llmProviderOptions" />
+                            <label class="form-label" style="font-size: 0.68rem;">Roleplay LLM Provider:</label>
+                            <CustomSelect @bind-Value="_selectedRoleplayLlmProvider" Options="_llmProviderOptions" />
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 0.68rem;">Chat Model Tag:</label>
-                            <input class="form-control" @bind="_chatModelIdentifier" placeholder="e.g. agy-pro, grok-2" />
+                            <label class="form-label" style="font-size: 0.68rem;">Model Tag / Identifier:</label>
+                            <input class="form-control" @bind="_roleplayModelIdentifier" placeholder="e.g. agy-pro, mistral-small, grok-2" />
                         </div>
                     </div>
                 </div>
 
-                <!-- SECTION 2: ROLEPLAY SIMULATION ENGINE -->
+                <!-- SECTION 2: CHARACTER & SCENE IMAGE GENERATOR ENGINE -->
                 <div>
-                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.3rem;">🎭 2. ROLEPLAY SIMULATION ENGINE (In-Character & Somatic Actions)</div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.3rem;">🎨 2. CHARACTER & SCENE IMAGE GENERATOR ENGINE</div>
                     <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 0.68rem;">Roleplay Provider Engine:</label>
-                            <CustomSelect @bind-Value="_selectedRoleplayLlmProvider" Options="_llmProviderOptions" />
+                            <label class="form-label" style="font-size: 0.68rem;">Image Generator Engine:</label>
+                            <CustomSelect @bind-Value="_selectedImageEngine" Options="_imageEngineOptions" />
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 0.68rem;">Roleplay Model Tag:</label>
-                            <input class="form-control" @bind="_roleplayModelIdentifier" placeholder="e.g. mistral-small, llama3.2" />
+                            <label class="form-label" style="font-size: 0.68rem;">Resolution / Aspect Ratio:</label>
+                            <input class="form-control" @bind="_imageResolution" placeholder="512x512, 1024x576" />
                         </div>
                     </div>
                 </div>
@@ -136,15 +136,22 @@
         new("MockEngine", "🧪 Mock LLM Engine (Offline Test)")
     };
 
+    private List<CustomSelect.DropdownOption> _imageEngineOptions = new()
+    {
+        new("PollinationsAI", "✨ Pollinations AI (Free Neural Renderer)"),
+        new("OllamaLocal", "🦙 Ollama Vision / Multimodal (Local)"),
+        new("StableDiffusionWebUI", "🎨 Stable Diffusion WebUI (http://localhost:7860)")
+    };
+
     private string _selectedCharA = "";
     private string _selectedCharB = "";
     private string _selectedGenre = "Contemporary";
     private string _sceneContext = "Quiet city apartment at midnight during a rainstorm.";
     private string _mode = "PlayerGuided";
-    private string _selectedChatLlmProvider = "AGY";
-    private string _chatModelIdentifier = "agy-pro";
-    private string _selectedRoleplayLlmProvider = "MistralVibe";
-    private string _roleplayModelIdentifier = "mistral-small";
+    private string _selectedRoleplayLlmProvider = "AGY";
+    private string _roleplayModelIdentifier = "agy-pro";
+    private string _selectedImageEngine = "PollinationsAI";
+    private string _imageResolution = "512x512";
     private double _temperature = 0.7;
     private int _maxTokens = 1024;
     private string _detectionStatus = "";
@@ -176,18 +183,16 @@
             _llmProviderOptions.Add(new(eng.Id, $"{eng.DisplayName} ({status})"));
         }
 
-        var availableChat = engines.Find(e => e.IsAvailable && e.Id != "MockEngine");
-        if (availableChat != null)
+        var availableRoleplay = engines.Find(e => e.IsAvailable && e.Id != "MockEngine");
+        if (availableRoleplay != null)
         {
-            _selectedChatLlmProvider = availableChat.Id;
-            _selectedRoleplayLlmProvider = availableChat.Id;
-            _detectionStatus = $"✅ Auto-detected active engine: {availableChat.DisplayName}";
+            _selectedRoleplayLlmProvider = availableRoleplay.Id;
+            _detectionStatus = $"✅ Auto-detected active Roleplay LLM engine: {availableRoleplay.DisplayName}";
         }
         else
         {
-            _selectedChatLlmProvider = "MockEngine";
             _selectedRoleplayLlmProvider = "MockEngine";
-            _detectionStatus = "ℹ️ Offline mode: Mock LLM Engine active.";
+            _detectionStatus = "ℹ️ Offline mode: Mock LLM Engine active for roleplay.";
         }
 
         StateHasChanged();
