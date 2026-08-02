@@ -14,7 +14,17 @@ public class AppSettings
     public string SelectedGenre { get; set; } = SceneGenreCatalog.DefaultGenreId;
     public string ScenePrompt { get; set; } = SceneGenreCatalog.DefaultSceneFor(SceneGenreCatalog.DefaultGenreId);
     public int MaxTurns { get; set; } = 10;
-    public string RoleplayMode { get; set; } = "AutoPlay";
+    public string RoleplayMode { get; set; } = "PlayerGuided";
+
+    // Roleplaying Engine Settings
+    public string RoleplayLlmProvider { get; set; } = "AGY";
+    public string RoleplayModelIdentifier { get; set; } = "agy-pro";
+    public double Temperature { get; set; } = 0.7;
+    public int MaxTokens { get; set; } = 1024;
+
+    // Imaging Engine Settings
+    public string ImageEngine { get; set; } = "PollinationsAI";
+    public string ImageResolution { get; set; } = "512x512";
 }
 
 public static class AppConfigService

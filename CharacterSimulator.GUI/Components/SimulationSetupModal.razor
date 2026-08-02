@@ -194,6 +194,22 @@
             _characterOptions.Add(new(c, c));
         }
 
+        var saved = AppConfigService.LoadSettings();
+        if (saved != null && saved.IsConfigured)
+        {
+            _selectedCharA = saved.SelectedCharA;
+            _selectedCharB = saved.SelectedCharB;
+            _selectedGenre = saved.SelectedGenre;
+            _sceneContext = saved.ScenePrompt;
+            _mode = saved.RoleplayMode;
+            _selectedRoleplayLlmProvider = saved.RoleplayLlmProvider;
+            _roleplayModelIdentifier = saved.RoleplayModelIdentifier;
+            _temperature = saved.Temperature;
+            _maxTokens = saved.MaxTokens;
+            _selectedImageEngine = saved.ImageEngine;
+            _imageResolution = saved.ImageResolution;
+        }
+
         await DetectEngines();
     }
 
@@ -234,11 +250,32 @@
             return;
         }
 
+        SaveCurrentSettings();
         OnClosed.InvokeAsync(true);
+    }
+
+    private void SaveCurrentSettings()
+    {
+        var settings = new AppSettings
+        {
+            SelectedCharA = _selectedCharA,
+            SelectedCharB = _selectedCharB,
+            SelectedGenre = _selectedGenre,
+            ScenePrompt = _sceneContext,
+            RoleplayMode = _mode,
+            RoleplayLlmProvider = _selectedRoleplayLlmProvider,
+            RoleplayModelIdentifier = _roleplayModelIdentifier,
+            Temperature = _temperature,
+            MaxTokens = _maxTokens,
+            ImageEngine = _selectedImageEngine,
+            ImageResolution = _imageResolution
+        };
+        AppConfigService.SaveSettings(settings);
     }
 
     private void Close()
     {
+        SaveCurrentSettings();
         OnClosed.InvokeAsync(false);
     }
 }
