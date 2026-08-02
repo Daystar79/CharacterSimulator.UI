@@ -1,0 +1,261 @@
+@page "/"
+@inject TurnControlContext ControlContext
+@inject IJSRuntime JS
+
+<div class="workspace-grid">
+    
+    <!-- LEFT PANEL: CHARACTER A -->
+    <div class="character-panel">
+        <div class="portrait-container">
+            @if (!string.IsNullOrEmpty(_charAAvatarPath) && System.IO.File.Exists(_charAAvatarPath))
+            {
+                <img class="portrait-img" src="@_charAAvatarPath" alt="@_charAName" />
+            }
+            else
+            {
+                <div class="canvas-fallback">
+                    <div class="canvas-avatar-icon">👤</div>
+                    <div class="canvas-char-name">@_charAName</div>
+                    <div class="canvas-bio">@_charABio</div>
+                </div>
+            }
+        </div>
+
+        <!-- TELEMETRY METERS -->
+        <div class="telemetry-section">
+            <div class="meter-group">
+                <div class="meter-header">
+                    <span>STRESS TELEMETRY</span>
+                    <span style="color: var(--accent-amber);">@_charAStress / 100</span>
+                </div>
+                <div class="meter-bar">
+                    <div class="meter-fill-stress" style="width: @(_charAStress)%"></div>
+                </div>
+            </div>
+            <div class="meter-group">
+                <div class="meter-header">
+                    <span>AROUSAL TELEMETRY</span>
+                    <span style="color: var(--accent-purple);">@_charAArousal / 100</span>
+                </div>
+                <div class="meter-bar">
+                    <div class="meter-fill-arousal" style="width: @(_charAArousal)%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GOALS -->
+        <div>
+            <div class="section-title">
+                <span>🎯</span>
+                <span>ACTIVE GOALS</span>
+            </div>
+            <div class="goals-list">
+                @foreach (var g in _charAGoals)
+                {
+                    <div class="goal-card">
+                        <div class="goal-name">@g.Name</div>
+                        <div class="goal-desc">@g.Description</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ACTIVE SKILLS -->
+        <div>
+            <div class="section-title">
+                <span>⚡</span>
+                <span>ACTIVE SKILLS & STANCES</span>
+            </div>
+            <div class="tags-cloud">
+                @foreach (var s in _charASkills)
+                {
+                    <span class="tag-chip">@s</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER PANEL: DIALOGUE FEED -->
+    <div class="feed-panel">
+        <div class="feed-messages" id="dialogueFeed">
+            @foreach (var msg in _dialogueFeed)
+            {
+                <div class="chat-bubble @(msg.IsSystem ? "chat-system" : (msg.IsLeft ? "chat-left" : "chat-right"))">
+                    @if (!msg.IsSystem)
+                    {
+                        <div class="chat-header">
+                            <span class="speaker-name" style="color: @msg.SpeakerColor;">@msg.SpeakerName ➔ @msg.TargetName</span>
+                            <span>@msg.SpeakerEmotionEmoji</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(msg.SomaticText))
+                        {
+                            <div class="somatic-tag">*@msg.SomaticText*</div>
+                        }
+                    }
+                    <div class="dialogue-text">@msg.Dialogue</div>
+                    @if (!string.IsNullOrEmpty(msg.BondDeltaText))
+                    {
+                        <div class="bond-badge">🔗 Bond Shift: @msg.BondDeltaText</div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- PLAYER PROMPT INPUT -->
+        <div class="player-input-bar">
+            <input class="input-box" placeholder="Type prompt or command (e.g. /step, /adult)..." @bind="_playerInput" @bind:event="oninput" @onkeyup="OnPlayerInputKeyUp" />
+            <button class="btn btn-primary" @onclick="SendPlayerInput">Send ➔</button>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: CHARACTER B -->
+    <div class="character-panel character-panel-right">
+        <div class="portrait-container">
+            @if (!string.IsNullOrEmpty(_charBAvatarPath) && System.IO.File.Exists(_charBAvatarPath))
+            {
+                <img class="portrait-img" src="@_charBAvatarPath" alt="@_charBName" />
+            }
+            else
+            {
+                <div class="canvas-fallback">
+                    <div class="canvas-avatar-icon">👤</div>
+                    <div class="canvas-char-name">@_charBName</div>
+                    <div class="canvas-bio">@_charBBio</div>
+                </div>
+            }
+        </div>
+
+        <!-- TELEMETRY METERS -->
+        <div class="telemetry-section">
+            <div class="meter-group">
+                <div class="meter-header">
+                    <span>STRESS TELEMETRY</span>
+                    <span style="color: var(--accent-amber);">@_charBStress / 100</span>
+                </div>
+                <div class="meter-bar">
+                    <div class="meter-fill-stress" style="width: @(_charBStress)%"></div>
+                </div>
+            </div>
+            <div class="meter-group">
+                <div class="meter-header">
+                    <span>AROUSAL TELEMETRY</span>
+                    <span style="color: var(--accent-purple);">@_charBArousal / 100</span>
+                </div>
+                <div class="meter-bar">
+                    <div class="meter-fill-arousal" style="width: @(_charBArousal)%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GOALS -->
+        <div>
+            <div class="section-title">
+                <span>🎯</span>
+                <span>ACTIVE GOALS</span>
+            </div>
+            <div class="goals-list">
+                @foreach (var g in _charBGoals)
+                {
+                    <div class="goal-card">
+                        <div class="goal-name">@g.Name</div>
+                        <div class="goal-desc">@g.Description</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ACTIVE SKILLS -->
+        <div>
+            <div class="section-title">
+                <span>⚡</span>
+                <span>ACTIVE SKILLS & STANCES</span>
+            </div>
+            <div class="tags-cloud">
+                @foreach (var s in _charBSkills)
+                {
+                    <span class="tag-chip">@s</span>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private string _charAName = "Serena Vance";
+    private string _charABio = "Skilled legal auditor & security analyst";
+    private string _charAAvatarPath = "";
+    private int _charAStress = 25;
+    private int _charAArousal = 15;
+    private List<GoalItem> _charAGoals = new()
+    {
+        new("Maintain Protocol", "Ensure security compliance across all sectors"),
+        new("Deepen Alliance", "Build trust with Kira")
+    };
+    private List<string> _charASkills = new() { "Legal Auditing", "Kinesiology", "Defensive Stance" };
+
+    private string _charBName = "Kira Nerys";
+    private string _charBBio = "Tactical commander & field operative";
+    private string _charBAvatarPath = "";
+    private int _charBStress = 35;
+    private int _charBArousal = 20;
+    private List<GoalItem> _charBGoals = new()
+    {
+        new("Perimeter Defense", "Monitor squad telemetry and perimeter breach points"),
+        new("Resource Audit", "Inspect supply caches")
+    };
+    private List<string> _charBSkills = new() { "Tactical Recon", "Field Leadership", "Aggressive Stance" };
+
+    private string _playerInput = "";
+    private List<ChatMessageModel> _dialogueFeed = new()
+    {
+        new ChatMessageModel { SpeakerName = "System", Dialogue = "Stage initialized. Ready for roleplay simulation.", IsSystem = true },
+        new ChatMessageModel { SpeakerName = "Serena", TargetName = "Kira", Dialogue = "Perimeter telemetry looks clear. Let's begin the security audit.", SpeakerColor = "#38BDF8", IsLeft = true, SomaticText = "adjusts datapad", SpeakerEmotionEmoji = "📑" },
+        new ChatMessageModel { SpeakerName = "Kira", TargetName = "Serena", Dialogue = "Acknowledged. Squad status is nominal.", SpeakerColor = "#C084FC", IsLeft = false, SomaticText = "nods firmly", SpeakerEmotionEmoji = "🫡", BondDeltaText = "+2 (Bond: 12)" }
+    };
+
+    private void OnPlayerInputKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            SendPlayerInput();
+        }
+    }
+
+    private void SendPlayerInput()
+    {
+        if (string.IsNullOrWhiteSpace(_playerInput)) return;
+
+        _dialogueFeed.Add(new ChatMessageModel
+        {
+            SpeakerName = "Player",
+            TargetName = "All",
+            Dialogue = _playerInput,
+            SpeakerColor = "#34D399",
+            IsLeft = true,
+            SpeakerEmotionEmoji = "💬"
+        });
+
+        _playerInput = "";
+        InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await JS.InvokeVoidAsync("scrollFeedToBottom", "dialogueFeed");
+        });
+    }
+
+    public record GoalItem(string Name, string Description);
+
+    public class ChatMessageModel
+    {
+        public string SpeakerName { get; set; } = "";
+        public string TargetName { get; set; } = "";
+        public string Dialogue { get; set; } = "";
+        public string SomaticText { get; set; } = "";
+        public string BondDeltaText { get; set; } = "";
+        public string SpeakerEmotionEmoji { get; set; } = "💬";
+        public string SpeakerColor { get; set; } = "#38BDF8";
+        public bool IsLeft { get; set; } = true;
+        public bool IsSystem { get; set; } = false;
+    }
+}

@@ -1,0 +1,83 @@
+@inject ProfileService ProfileSvc
+
+<div class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">👤 CREATE NEW USER PROFILE</div>
+            <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Cancel">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Set up your player profile, date of birth (for adult path calculation), and optional PIN.</p>
+
+            <div class="form-group">
+                <label class="form-label">Player / Profile Name:</label>
+                <input class="form-control" @bind="_name" placeholder="e.g. Player 1" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Date of Birth (Year / Month / Day):</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+                    <input type="number" class="form-control" min="1920" max="2026" @bind="_year" />
+                    <input type="number" class="form-control" min="1" max="12" @bind="_month" />
+                    <input type="number" class="form-control" min="1" max="31" @bind="_day" />
+                </div>
+                <div style="font-size: 0.68rem; color: var(--text-muted);">* Age is calculated locally. Profiles under 18 have adult content paths locked.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Optional Security PIN (Leave blank for none):</label>
+                <input type="password" class="form-control" placeholder="Optional PIN..." @bind="_pin" />
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem;">
+                <input type="checkbox" id="adultAttest" @bind="_adultAttest" />
+                <label for="adultAttest" style="font-size: 0.75rem; color: var(--accent-amber); cursor: pointer;">I attest that I am 18+ and wish to enable Adult Mode</label>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div style="color: var(--accent-rose); font-size: 0.75rem; font-weight: 600;">@_errorMessage</div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            <button class="btn btn-success" @onclick="SaveProfile">Save Profile</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnClosed { get; set; }
+
+    private string _name = "Player 1";
+    private int _year = 2000;
+    private int _month = 1;
+    private int _day = 1;
+    private string _pin = "";
+    private bool _adultAttest = false;
+    private string _errorMessage = "";
+
+    private void SaveProfile()
+    {
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _errorMessage = "Please enter a valid display name.";
+            return;
+        }
+
+        try
+        {
+            var p = ProfileSvc.CreateProfile(_name.Trim(), _year, _month, _day, string.IsNullOrWhiteSpace(_pin) ? null : _pin.Trim(), _adultAttest);
+            OnClosed.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void Cancel()
+    {
+        OnClosed.InvokeAsync(false);
+    }
+}

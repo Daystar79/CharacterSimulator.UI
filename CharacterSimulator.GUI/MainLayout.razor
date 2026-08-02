@@ -1,0 +1,271 @@
+@inherits LayoutComponentBase
+@inject TurnControlContext ControlContext
+@inject ProfileService ProfileSvc
+@inject IJSRuntime JS
+
+<div class="app-container">
+    
+    <!-- 1. TOP MENU BAR -->
+    <div class="top-menu-bar">
+        <div class="menu-item">
+            <span>📁 File</span>
+            <div class="menu-dropdown">
+                <div class="dropdown-action" @onclick="OpenSetupModal">⚙️ Simulation Setup...</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-action" @onclick="SaveSession">💾 Save Session</div>
+                <div class="dropdown-action" @onclick="LoadSession">📂 Load Session...</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-action" @onclick="ResetStage">↺ Reset Stage</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            <span>👤 Profile</span>
+            <div class="menu-dropdown">
+                <div class="dropdown-action" @onclick="OpenProfilePickerModal">🔑 Switch Profile...</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            <span>🎮 Mode</span>
+            <div class="menu-dropdown">
+                <div class="dropdown-action" @onclick="SetAutoPlayMode">🤖 Auto-Play Mode</div>
+                <div class="dropdown-action" @onclick="SetPlayerGuidedMode">🎮 Player-Guided Mode</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            <span>⏯ Playback</span>
+            <div class="menu-dropdown">
+                <div class="dropdown-action" @onclick="PlaySimulation">▶ Play</div>
+                <div class="dropdown-action" @onclick="PauseSimulation">⏸ Pause</div>
+                <div class="dropdown-action" @onclick="StepSimulation">⏭ Step</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-action" @onclick="StopSimulation">⏹ Stop</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PLAYBACK TOOLBAR -->
+    <div class="playback-toolbar">
+        <div class="toolbar-left">
+            <div class="app-badge-title">
+                <div class="icon-box">🎭</div>
+                <span>CHARACTER SIMULATOR</span>
+            </div>
+            <span class="badge @StatusBadgeClass">● @_statusBadgeText</span>
+            <span class="badge badge-profile">👤 @_activeProfileBadge</span>
+            <span class="badge badge-ready">@_activeModeBadge</span>
+        </div>
+
+        <div class="toolbar-right">
+            <button class="btn btn-success" disabled="@_isPlaying" @onclick="PlaySimulation">▶ Play</button>
+
+            <div class="menu-item" style="padding: 0;">
+                <button class="btn btn-secondary">⚙️ Controls ▾</button>
+                <div class="menu-dropdown" style="right: 0; left: auto;">
+                    <div class="dropdown-action" @onclick="PauseSimulation">⏸ Pause Simulation</div>
+                    <div class="dropdown-action" @onclick="StepSimulation">⏭ Step (Single Turn)</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-action" @onclick="StopSimulation">⏹ Stop Simulation</div>
+                </div>
+            </div>
+
+            <div style="height: 18px; width: 1px; background: var(--border-color); margin: 0 0.25rem;"></div>
+
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem;">
+                <span style="color: var(--text-secondary);">⚡ Delay:</span>
+                <span style="color: var(--accent-amber); font-weight: 700;">@(_delayMs)ms</span>
+                <input type="range" min="100" max="3000" step="50" value="@_delayMs" @oninput="OnDelayChanged" style="width: 80px;" />
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. DEDICATED SCENE DESCRIPTION TOOLBAR LINE -->
+    <div class="scene-toolbar-line">
+        <span class="scene-badge">📍 SCENE DESCRIPTION</span>
+        <span class="scene-text">@_activeSceneContext</span>
+    </div>
+
+    <!-- 4. MAIN WORKSPACE CONTENT BODY -->
+    @Body
+
+    <!-- 5. BOTTOM STATUS BAR -->
+    <div class="bottom-status-bar">
+        <span>@_statusText</span>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            @if (_isWaitingForLlm)
+            {
+                <div class="waiting-badge">
+                    <span>⏳</span>
+                    <span>Waiting for LLM response...</span>
+                </div>
+            }
+            <span style="background: #0f172a; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">
+                ⚡ @_activeLlmInfo
+            </span>
+            <span>.NET 10.0 • Blazor Desktop</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL DIALOGS -->
+@if (_showProfilePickerModal)
+{
+    <ProfilePickerModal OnClosed="OnProfilePickerClosed" OnCreateRequested="OpenCreateProfileModal" />
+}
+
+@if (_showCreateProfileModal)
+{
+    <CreateProfileModal OnClosed="OnCreateProfileClosed" />
+}
+
+@if (_showSetupModal)
+{
+    <SimulationSetupModal OnClosed="OnSetupModalClosed" />
+}
+
+@code {
+    private string _statusBadgeText = "READY";
+    private string StatusBadgeClass => _statusBadgeText switch
+    {
+        "RUNNING" => "badge-running",
+        "PAUSED" => "badge-paused",
+        "STOPPED" => "badge-stopped",
+        _ => "badge-ready"
+    };
+
+    private string _activeProfileBadge = "Player 1 (Age 25)";
+    private string _activeModeBadge = "🤖 Auto-Play";
+    private string _activeSceneContext = "[Contemporary] Quiet city apartment...";
+    private string _statusText = "Ready. Click File ➔ Simulation Setup to configure characters.";
+    private string _activeLlmInfo = "Agent A: Mock | Agent B: Mock";
+    private int _delayMs = 600;
+    private bool _isPlaying = false;
+    private bool _isWaitingForLlm = false;
+
+    private bool _showProfilePickerModal = false;
+    private bool _showCreateProfileModal = false;
+    private bool _showSetupModal = false;
+
+    protected override void OnInitialized()
+    {
+        UpdateActiveProfileBadge();
+        ControlContext.OnStateChanged += OnSimulationStateChanged;
+    }
+
+    private void UpdateActiveProfileBadge()
+    {
+        var profile = ProfileSvc.ActiveProfile;
+        if (profile != null)
+        {
+            _activeProfileBadge = $"{profile.DisplayName} (Age {profile.CalculateAge()})";
+        }
+    }
+
+    private void OnSimulationStateChanged(SimulationState state)
+    {
+        InvokeAsync(() =>
+        {
+            switch (state)
+            {
+                case SimulationState.Running:
+                    _statusBadgeText = "RUNNING";
+                    _isPlaying = true;
+                    _statusText = "Simulation running...";
+                    break;
+                case SimulationState.Paused:
+                    _statusBadgeText = "PAUSED";
+                    _isPlaying = false;
+                    _statusText = "Simulation paused.";
+                    break;
+                case SimulationState.Stopped:
+                    _statusBadgeText = "STOPPED";
+                    _isPlaying = false;
+                    _statusText = "Simulation stopped.";
+                    break;
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void OnDelayChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int val))
+        {
+            _delayMs = val;
+            ControlContext.DelayMs = val;
+        }
+    }
+
+    private void PlaySimulation()
+    {
+        ControlContext.Start();
+    }
+
+    private void PauseSimulation()
+    {
+        ControlContext.Pause();
+    }
+
+    private void StepSimulation()
+    {
+        ControlContext.Step();
+    }
+
+    private void StopSimulation()
+    {
+        ControlContext.Stop();
+    }
+
+    private void SetAutoPlayMode()
+    {
+        _activeModeBadge = "🤖 Auto-Play";
+    }
+
+    private void SetPlayerGuidedMode()
+    {
+        _activeModeBadge = "🎮 Player-Guided";
+    }
+
+    private void OpenProfilePickerModal()
+    {
+        _showProfilePickerModal = true;
+    }
+
+    private void OnProfilePickerClosed(bool profileSwitched)
+    {
+        _showProfilePickerModal = false;
+        if (profileSwitched)
+        {
+            UpdateActiveProfileBadge();
+        }
+    }
+
+    private void OpenCreateProfileModal()
+    {
+        _showProfilePickerModal = false;
+        _showCreateProfileModal = true;
+    }
+
+    private void OnCreateProfileClosed(bool profileCreated)
+    {
+        _showCreateProfileModal = false;
+        if (profileCreated)
+        {
+            _showProfilePickerModal = true;
+        }
+    }
+
+    private void OpenSetupModal()
+    {
+        _showSetupModal = true;
+    }
+
+    private void OnSetupModalClosed(bool setupCompleted)
+    {
+        _showSetupModal = false;
+    }
+
+    private void SaveSession() { }
+    private void LoadSession() { }
+    private void ResetStage() { }
+}

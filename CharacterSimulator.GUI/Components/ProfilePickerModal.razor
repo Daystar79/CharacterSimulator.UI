@@ -1,0 +1,106 @@
+@inject ProfileService ProfileSvc
+
+<div class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">👤 SELECT USER PROFILE</div>
+            <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Choose an existing profile or create a new profile below.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem;">
+                @foreach (var p in _profiles)
+                {
+                    <div style="background: #0f172a; border: 1px solid @(p.Id == _selectedProfileId ? "var(--accent-blue)" : "var(--border-color)"); border-radius: 6px; padding: 0.75rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" @onclick="() => SelectProfile(p.Id)">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">@p.DisplayName</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted);">Age: @p.CalculateAge() | DOB: @p.DobYear-@p.DobMonth.ToString("00")-@p.DobDay.ToString("00")</div>
+                        </div>
+                        <div>
+                            @if (p.IsAdultEligible())
+                            {
+                                <span style="background: #064e3b; color: #6ee7b7; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700;">18+ Adult</span>
+                            }
+                            else
+                            {
+                                <span style="background: #1e293b; color: #94a3b8; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.65rem;">Standard</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (_hasPin)
+            {
+                <div class="form-group" style="margin-top: 0.75rem;">
+                    <label class="form-label" style="color: var(--accent-amber);">🔒 ENTER SECURITY PIN:</label>
+                    <input type="password" class="form-control" placeholder="Enter PIN..." @bind="_pinInput" />
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div style="color: var(--accent-rose); font-size: 0.75rem; font-weight: 600;">@_errorMessage</div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" @onclick="CreateNew">➕ New Profile...</button>
+            <button class="btn btn-success" disabled="@(string.IsNullOrEmpty(_selectedProfileId))" @onclick="UnlockProfile">🔓 Unlock & Select</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnClosed { get; set; }
+    [Parameter] public EventCallback OnCreateRequested { get; set; }
+
+    private List<UserProfile> _profiles = new();
+    private string _selectedProfileId = "";
+    private bool _hasPin = false;
+    private string _pinInput = "";
+    private string _errorMessage = "";
+
+    protected override void OnInitialized()
+    {
+        _profiles = ProfileSvc.Profiles.GetAllProfiles();
+        if (_profiles.Count > 0)
+        {
+            SelectProfile(_profiles[0].Id);
+        }
+    }
+
+    private void SelectProfile(string id)
+    {
+        _selectedProfileId = id;
+        var p = _profiles.FirstOrDefault(x => x.Id == id);
+        _hasPin = p != null && !string.IsNullOrEmpty(p.PinHash);
+        _errorMessage = "";
+    }
+
+    private void UnlockProfile()
+    {
+        if (string.IsNullOrEmpty(_selectedProfileId)) return;
+        var p = _profiles.FirstOrDefault(x => x.Id == _selectedProfileId);
+        if (p == null) return;
+
+        if (ProfileSvc.SwitchProfile(p.Id, _pinInput))
+        {
+            OnClosed.InvokeAsync(true);
+        }
+        else
+        {
+            _errorMessage = "Invalid PIN code. Please try again.";
+        }
+    }
+
+    private void CreateNew()
+    {
+        OnCreateRequested.InvokeAsync();
+    }
+
+    private void Close()
+    {
+        OnClosed.InvokeAsync(false);
+    }
+}
