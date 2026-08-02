@@ -7,7 +7,7 @@
     <!-- LEFT PANEL: CHARACTER A -->
     <div class="character-panel">
         <div class="portrait-container">
-            @if (!string.IsNullOrEmpty(_charAAvatarPath) && System.IO.File.Exists(_charAAvatarPath))
+            @if (!string.IsNullOrEmpty(_charAAvatarPath) && (System.IO.File.Exists(_charAAvatarPath) || _charAAvatarPath.StartsWith("http")))
             {
                 <img class="portrait-img" src="@_charAAvatarPath" alt="@_charAName" />
             }
@@ -19,6 +19,7 @@
                     <div class="canvas-bio">@_charABio</div>
                 </div>
             }
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot A")'>✨ Generate AI Art</button>
         </div>
 
         <!-- TELEMETRY METERS -->
@@ -125,7 +126,7 @@
     <!-- RIGHT PANEL: CHARACTER B -->
     <div class="character-panel character-panel-right">
         <div class="portrait-container">
-            @if (!string.IsNullOrEmpty(_charBAvatarPath) && System.IO.File.Exists(_charBAvatarPath))
+            @if (!string.IsNullOrEmpty(_charBAvatarPath) && (System.IO.File.Exists(_charBAvatarPath) || _charBAvatarPath.StartsWith("http")))
             {
                 <img class="portrait-img" src="@_charBAvatarPath" alt="@_charBName" />
             }
@@ -137,6 +138,7 @@
                     <div class="canvas-bio">@_charBBio</div>
                 </div>
             }
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot B")'>✨ Generate AI Art</button>
         </div>
 
         <!-- TELEMETRY METERS -->
@@ -209,9 +211,17 @@
 
 </div>
 
+@if (_showGeneratePortraitModal)
+{
+    <GeneratePortraitModal SlotName="@_targetPortraitSlot" OnPortraitGenerated="OnPortraitGenerated" />
+}
+
 @implements IDisposable
 
 @code {
+    private bool _showGeneratePortraitModal = false;
+    private string _targetPortraitSlot = "Slot A";
+
     private string _charAName = "(No Character Selected)";
     private string _charABio = "No character card assigned to Slot A. Open File ➔ Simulation Setup to select a character.";
     private string _charAAvatarPath = "";
@@ -251,6 +261,29 @@
             StateHasChanged();
             _ = JS.InvokeVoidAsync("scrollFeedToBottom", "dialogueFeed");
         });
+    }
+
+    private void OpenGeneratePortraitModal(string slotName)
+    {
+        _targetPortraitSlot = slotName;
+        _showGeneratePortraitModal = true;
+    }
+
+    private void OnPortraitGenerated(string path)
+    {
+        _showGeneratePortraitModal = false;
+        if (!string.IsNullOrEmpty(path))
+        {
+            if (_targetPortraitSlot == "Slot A")
+            {
+                _charAAvatarPath = path;
+            }
+            else
+            {
+                _charBAvatarPath = path;
+            }
+            StateHasChanged();
+        }
     }
 
     private void OnPlayerInputKeyUp(KeyboardEventArgs e)

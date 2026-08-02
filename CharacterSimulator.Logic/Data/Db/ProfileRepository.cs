@@ -20,7 +20,7 @@ public class ProfileRepository
         var list = new List<UserProfile>();
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at
+            SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at, recovery_code
             FROM profiles
             ORDER BY last_opened_at DESC;";
 
@@ -36,7 +36,7 @@ public class ProfileRepository
     {
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at
+            SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at, recovery_code
             FROM profiles
             WHERE id = @id LIMIT 1;";
         cmd.Parameters.AddWithValue("@id", profileId);
@@ -59,6 +59,8 @@ public class ProfileRepository
             hash = HashPin(pin, salt);
         }
 
+        string recoveryCode = GenerateRecoveryCode();
+
         var profile = new UserProfile
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -66,8 +68,9 @@ public class ProfileRepository
             DobYear = dobYear,
             DobMonth = dobMonth,
             DobDay = dobDay,
-            PinSalt = salt,
             PinHash = hash,
+            PinSalt = salt,
+            RecoveryCode = recoveryCode,
             IsAdultAttested = adultAttested,
             CreatedAt = DateTime.UtcNow,
             LastOpenedAt = DateTime.UtcNow
@@ -75,8 +78,8 @@ public class ProfileRepository
 
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO profiles (id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at)
-            VALUES (@id, @name, @year, @month, @day, @hash, @salt, @attested, @created, @opened);";
+            INSERT INTO profiles (id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, recovery_code, is_adult_attested, created_at, last_opened_at)
+            VALUES (@id, @name, @year, @month, @day, @hash, @salt, @rec, @adult, @created, @opened);";
         cmd.Parameters.AddWithValue("@id", profile.Id);
         cmd.Parameters.AddWithValue("@name", profile.DisplayName);
         cmd.Parameters.AddWithValue("@year", profile.DobYear);
@@ -84,12 +87,60 @@ public class ProfileRepository
         cmd.Parameters.AddWithValue("@day", profile.DobDay);
         cmd.Parameters.AddWithValue("@hash", (object?)profile.PinHash ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@salt", (object?)profile.PinSalt ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@attested", profile.IsAdultAttested ? 1 : 0);
+        cmd.Parameters.AddWithValue("@rec", profile.RecoveryCode);
+        cmd.Parameters.AddWithValue("@adult", profile.IsAdultAttested ? 1 : 0);
         cmd.Parameters.AddWithValue("@created", profile.CreatedAt.ToString("o"));
         cmd.Parameters.AddWithValue("@opened", profile.LastOpenedAt.ToString("o"));
-
         cmd.ExecuteNonQuery();
+
         return profile;
+    }
+
+    public bool UpdatePin(string profileId, string? oldPin, string? newPin)
+    {
+        var p = GetById(profileId);
+        if (p == null) return false;
+
+        if (!VerifyPin(p, oldPin ?? "")) return false;
+
+        string? newSalt = null;
+        string? newHash = null;
+        if (!string.IsNullOrWhiteSpace(newPin))
+        {
+            newSalt = GenerateSalt();
+            newHash = HashPin(newPin, newSalt);
+        }
+
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "UPDATE profiles SET pin_hash = @hash, pin_salt = @salt WHERE id = @id;";
+        cmd.Parameters.AddWithValue("@hash", (object?)newHash ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@salt", (object?)newSalt ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", profileId);
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    public bool ResetPinWithRecoveryCode(string profileId, string recoveryCode, string? newPin)
+    {
+        var p = GetById(profileId);
+        if (p == null || string.IsNullOrWhiteSpace(p.RecoveryCode)) return false;
+
+        if (!string.Equals(p.RecoveryCode.Trim(), recoveryCode.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        string? newSalt = null;
+        string? newHash = null;
+        if (!string.IsNullOrWhiteSpace(newPin))
+        {
+            newSalt = GenerateSalt();
+            newHash = HashPin(newPin, newSalt);
+        }
+
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "UPDATE profiles SET pin_hash = @hash, pin_salt = @salt WHERE id = @id;";
+        cmd.Parameters.AddWithValue("@hash", (object?)newHash ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@salt", (object?)newSalt ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", profileId);
+        return cmd.ExecuteNonQuery() > 0;
     }
 
     public bool VerifyPin(UserProfile profile, string pin)
@@ -132,7 +183,8 @@ public class ProfileRepository
             PinSalt = reader.IsDBNull(6) ? null : reader.GetString(6),
             IsAdultAttested = reader.GetInt32(7) == 1,
             CreatedAt = DateTime.Parse(reader.GetString(8)),
-            LastOpenedAt = DateTime.Parse(reader.GetString(9))
+            LastOpenedAt = DateTime.Parse(reader.GetString(9)),
+            RecoveryCode = reader.IsDBNull(10) ? null : reader.GetString(10)
         };
     }
 
@@ -152,6 +204,11 @@ public class ProfileRepository
             HashAlgorithmName.SHA256,
             32);
         return Convert.ToBase64String(hash);
+    }
+
+    private static string GenerateRecoveryCode()
+    {
+        return $"REC-{Guid.NewGuid().ToString("N").Substring(0, 4).ToUpper()}-{Guid.NewGuid().ToString("N").Substring(0, 4).ToUpper()}-{Guid.NewGuid().ToString("N").Substring(0, 4).ToUpper()}";
     }
 
     public bool DeleteProfile(string profileId)

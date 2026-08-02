@@ -12,8 +12,7 @@
             <div class="menu-dropdown">
                 <div class="dropdown-action" @onclick="OpenSetupModal">⚙️ Simulation Setup...</div>
                 <div class="dropdown-divider"></div>
-                <div class="dropdown-action" @onclick="SaveSession">💾 Save Session</div>
-                <div class="dropdown-action" @onclick="LoadSession">📂 Load Session...</div>
+                <div class="dropdown-action" @onclick="OpenSavedSessionsModal">📂 Saved Sessions & Exports...</div>
                 <div class="dropdown-divider"></div>
                 <div class="dropdown-action" @onclick="ResetStage">↺ Reset Stage</div>
             </div>
@@ -22,6 +21,7 @@
             <span>👤 Profile</span>
             <div class="menu-dropdown">
                 <div class="dropdown-action" @onclick="OpenProfilePickerModal">🔑 Switch Profile...</div>
+                <div class="dropdown-action" @onclick="OpenChangePinModal">🔒 Security PIN & Recovery...</div>
             </div>
         </div>
         <div class="menu-item">
@@ -123,6 +123,16 @@
     <SimulationSetupModal OnClosed="OnSetupModalClosed" />
 }
 
+@if (_showSavedSessionsModal)
+{
+    <SavedSessionsModal OnSessionSelected="OnSavedSessionSelected" />
+}
+
+@if (_showChangePinModal)
+{
+    <ChangePinModal OnClosed="OnChangePinClosed" />
+}
+
 @implements IDisposable
 
 @code {
@@ -147,6 +157,8 @@
     private bool _showProfilePickerModal = false;
     private bool _showCreateProfileModal = false;
     private bool _showSetupModal = false;
+    private bool _showSavedSessionsModal = false;
+    private bool _showChangePinModal = false;
 
     protected override void OnInitialized()
     {
@@ -276,8 +288,34 @@
         _showCreateProfileModal = false;
         if (profileCreated)
         {
-            _showProfilePickerModal = true;
+            UpdateActiveProfileBadge();
         }
+    }
+
+    private void OpenSavedSessionsModal()
+    {
+        _showSavedSessionsModal = true;
+    }
+
+    private void OnSavedSessionSelected(DbSession? session)
+    {
+        _showSavedSessionsModal = false;
+        if (session != null)
+        {
+            _activeSceneContext = $"[{session.Genre}] {session.Scene}";
+            _statusText = $"Resumed session '{session.Title}'.";
+            ControlContext.NotifyUIUpdate();
+        }
+    }
+
+    private void OpenChangePinModal()
+    {
+        _showChangePinModal = true;
+    }
+
+    private void OnChangePinClosed(bool updated)
+    {
+        _showChangePinModal = false;
     }
 
     private void OpenSetupModal()
@@ -285,12 +323,14 @@
         _showSetupModal = true;
     }
 
-    private void OnSetupModalClosed(bool setupCompleted)
+    private void OnSetupModalClosed(bool launched)
     {
         _showSetupModal = false;
     }
 
-    private void SaveSession() { }
-    private void LoadSession() { }
-    private void ResetStage() { }
+    private void ResetStage()
+    {
+        ControlContext.Stop();
+        _statusText = "Stage reset. Select Simulation Setup to begin new session.";
+    }
 }

@@ -11,6 +11,7 @@ public class UserProfile
     public int DobDay { get; set; } = 1;
     public string? PinHash { get; set; }
     public string? PinSalt { get; set; }
+    public string? RecoveryCode { get; set; }
     public bool IsAdultAttested { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastOpenedAt { get; set; } = DateTime.UtcNow;

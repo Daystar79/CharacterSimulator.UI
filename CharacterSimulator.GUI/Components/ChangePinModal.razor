@@ -1,0 +1,107 @@
+@inject ProfileService ProfileSvc
+
+<div class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">🔒 PIN & RECOVERY MANAGEMENT</div>
+            <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+                <button class="btn @(_isRecoveryMode ? "btn-secondary" : "btn-primary")" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;" @onclick="() => _isRecoveryMode = false">🔑 Change PIN</button>
+                <button class="btn @(_isRecoveryMode ? "btn-primary" : "btn-secondary")" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;" @onclick="() => _isRecoveryMode = true">🆘 Forgot PIN (Recovery Code)</button>
+            </div>
+
+            @if (!_isRecoveryMode)
+            {
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">Update security PIN for <b>@(ProfileSvc.ActiveProfile?.DisplayName ?? "Player")</b>.</p>
+
+                <div class="form-group">
+                    <label class="form-label">Current PIN (Leave blank if none):</label>
+                    <input type="password" class="form-control" placeholder="Current PIN..." @bind="_oldPin" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">New PIN (Leave blank to remove PIN):</label>
+                    <input type="password" class="form-control" placeholder="New PIN..." @bind="_newPin" />
+                </div>
+            }
+            else
+            {
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">Reset security PIN using your emergency <b>Recovery Code</b>.</p>
+
+                <div class="form-group">
+                    <label class="form-label">Emergency Recovery Code (e.g. REC-XXXX-XXXX-XXXX):</label>
+                    <input type="text" class="form-control" placeholder="REC-XXXX-XXXX-XXXX" @bind="_recoveryCode" style="font-family: monospace;" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">New PIN (Leave blank to clear PIN):</label>
+                    <input type="password" class="form-control" placeholder="New PIN..." @bind="_newPin" />
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_message))
+            {
+                <div style="color: @(_isError ? "var(--accent-rose)" : "var(--accent-green)"); font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem;">@_message</div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" @onclick="Close">Cancel</button>
+            <button class="btn btn-success" @onclick="Submit">Apply & Save PIN</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnClosed { get; set; }
+
+    private bool _isRecoveryMode = false;
+    private string _oldPin = "";
+    private string _newPin = "";
+    private string _recoveryCode = "";
+    private string _message = "";
+    private bool _isError = false;
+
+    private void Submit()
+    {
+        var profile = ProfileSvc.ActiveProfile;
+        if (profile == null) return;
+
+        if (!_isRecoveryMode)
+        {
+            bool ok = ProfileSvc.Profiles.UpdatePin(profile.Id, _oldPin, _newPin);
+            if (ok)
+            {
+                _isError = false;
+                _message = "✅ Security PIN updated successfully!";
+                OnClosed.InvokeAsync(true);
+            }
+            else
+            {
+                _isError = true;
+                _message = "❌ Invalid current PIN. Please check and try again.";
+            }
+        }
+        else
+        {
+            bool ok = ProfileSvc.Profiles.ResetPinWithRecoveryCode(profile.Id, _recoveryCode, _newPin);
+            if (ok)
+            {
+                _isError = false;
+                _message = "✅ PIN reset successfully via Recovery Code!";
+                OnClosed.InvokeAsync(true);
+            }
+            else
+            {
+                _isError = true;
+                _message = "❌ Invalid Recovery Code. Please check the code and try again.";
+            }
+        }
+    }
+
+    private void Close()
+    {
+        OnClosed.InvokeAsync(false);
+    }
+}

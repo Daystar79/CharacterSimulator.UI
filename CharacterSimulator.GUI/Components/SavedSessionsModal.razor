@@ -1,0 +1,141 @@
+@inject ProfileService ProfileSvc
+
+<div class="modal-overlay">
+    <div class="modal-card" style="width: 650px;">
+        <div class="modal-header">
+            <div class="modal-title">📁 SAVED ROLEPLAY SESSIONS</div>
+            <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Browse, resume, export, or delete saved SQLite roleplay sessions for profile <b>@(ProfileSvc.ActiveProfile?.DisplayName ?? "Player")</b>.</p>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 320px; overflow-y: auto; margin-top: 0.5rem;">
+                @if (_sessions.Count == 0)
+                {
+                    <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 2rem;">No saved roleplay sessions found for this profile.</div>
+                }
+                else
+                {
+                    @foreach (var s in _sessions)
+                    {
+                        <div style="background: #0f172a; border: 1px solid @(s.Id == _selectedSessionId ? "var(--accent-blue)" : "var(--border-color)"); border-radius: 6px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" @onclick="() => SelectSession(s.Id)">
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">@s.Title</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">Scene: @s.Scene | Genre: @s.Genre | Mode: @s.Mode</div>
+                                <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.2rem;">Updated: @s.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</div>
+                            </div>
+                            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" title="Export Transcript to .md" @onclick:stopPropagation="true" @onclick="() => ExportMd(s)">📥 Export .MD</button>
+                                <button class="btn btn-danger" style="padding: 0.25rem 0.45rem; font-size: 0.7rem;" title="Delete Session" @onclick:stopPropagation="true" @onclick="() => DeleteSession(s.Id)">🗑️</button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div style="color: var(--accent-green); font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem;">@_statusMessage</div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" @onclick="Close">Close</button>
+            <button class="btn btn-success" disabled="@(string.IsNullOrEmpty(_selectedSessionId))" @onclick="LoadSelected">🚀 Resume & Load Session</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<DbSession?> OnSessionSelected { get; set; }
+
+    private List<DbSession> _sessions = new();
+    private string _selectedSessionId = "";
+    private string _statusMessage = "";
+
+    protected override void OnInitialized()
+    {
+        RefreshList();
+    }
+
+    private void RefreshList()
+    {
+        if (ProfileSvc.ActiveProfile != null)
+        {
+            _sessions = ProfileSvc.Sessions.GetSessionsForProfile(ProfileSvc.ActiveProfile.Id);
+            if (_sessions.Count > 0 && string.IsNullOrEmpty(_selectedSessionId))
+            {
+                _selectedSessionId = _sessions[0].Id;
+            }
+        }
+    }
+
+    private void SelectSession(string id)
+    {
+        _selectedSessionId = id;
+        _statusMessage = "";
+    }
+
+    private void LoadSelected()
+    {
+        var target = _sessions.FirstOrDefault(s => s.Id == _selectedSessionId);
+        if (target != null)
+        {
+            OnSessionSelected.InvokeAsync(target);
+        }
+    }
+
+    private void ExportMd(DbSession session)
+    {
+        var turns = ProfileSvc.Sessions.GetTurnsForSession(session.Id);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"# Roleplay Session Transcript: {session.Title}");
+        sb.AppendLine($"**Profile**: {ProfileSvc.ActiveProfile?.DisplayName ?? "Player"}");
+        sb.AppendLine($"**Scene**: {session.Scene}");
+        sb.AppendLine($"**Genre**: {session.Genre}");
+        sb.AppendLine($"**Mode**: {session.Mode}");
+        sb.AppendLine($"**Date**: {session.StartedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine();
+
+        foreach (var t in turns)
+        {
+            sb.AppendLine($"### **{t.Speaker}** ➔ **{t.Target}** *({t.SpeakerEmotion})*");
+            if (!string.IsNullOrEmpty(t.SomaticJson))
+            {
+                sb.AppendLine($"*{t.SomaticJson}*");
+            }
+            sb.AppendLine();
+            sb.AppendLine($"> {t.Dialogue}");
+            sb.AppendLine();
+            if (t.BondDelta != 0)
+            {
+                sb.AppendLine($"*🔗 Bond Shift: {(t.BondDelta > 0 ? "+" : "")}{t.BondDelta} (Current: {t.CurrentBond})*");
+                sb.AppendLine();
+            }
+        }
+
+        string exportDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
+        System.IO.Directory.CreateDirectory(exportDir);
+        string filename = System.IO.Path.Combine(exportDir, $"Transcript_{session.Title.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd_HHmmss}.md");
+        System.IO.File.WriteAllText(filename, sb.ToString());
+
+        _statusMessage = $"✅ Exported to {System.IO.Path.GetFileName(filename)} in Exports/ directory!";
+    }
+
+    private void DeleteSession(string id)
+    {
+        bool success = ProfileSvc.Sessions.DeleteSession(id);
+        if (success)
+        {
+            if (_selectedSessionId == id) _selectedSessionId = "";
+            RefreshList();
+            _statusMessage = "🗑️ Session deleted.";
+        }
+    }
+
+    private void Close()
+    {
+        OnSessionSelected.InvokeAsync(null);
+    }
+}

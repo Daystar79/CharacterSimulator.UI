@@ -44,6 +44,19 @@ public class ProfileAndDatabaseTests
             var all = repo.GetAllProfiles();
             Assert.Equal(2, all.Count);
 
+            Assert.False(string.IsNullOrEmpty(p1.RecoveryCode));
+            Assert.True(p1.RecoveryCode.StartsWith("REC-"));
+
+            bool updatedPin = repo.UpdatePin(p1.Id, "1234", "5678");
+            Assert.True(updatedPin);
+            var updatedP1 = repo.GetById(p1.Id);
+            Assert.True(repo.VerifyPin(updatedP1!, "5678"));
+
+            bool resetPin = repo.ResetPinWithRecoveryCode(p1.Id, p1.RecoveryCode, "0000");
+            Assert.True(resetPin);
+            var resetP1 = repo.GetById(p1.Id);
+            Assert.True(repo.VerifyPin(resetP1!, "0000"));
+
             bool deleted = repo.DeleteProfile(p1.Id);
             Assert.True(deleted);
             Assert.Single(repo.GetAllProfiles());

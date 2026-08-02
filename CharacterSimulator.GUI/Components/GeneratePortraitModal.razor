@@ -1,0 +1,94 @@
+@using CharacterSimulator.Logic.Services
+
+<div class="modal-overlay">
+    <div class="modal-card" style="width: 520px;">
+        <div class="modal-header">
+            <div class="modal-title">🎨 AI CHARACTER PORTRAIT GENERATOR</div>
+            <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Generate a custom AI portrait for character slot <b>@SlotName</b> using Pollinations AI (Free API).</p>
+
+            <div class="form-group">
+                <label class="form-label">Appearance Prompt / Description:</label>
+                <textarea class="form-control" rows="3" @bind="_prompt" placeholder="e.g. Cyberpunk security officer female, dark hair, cyan visor, high detail digital art..."></textarea>
+            </div>
+
+            @if (_isGenerating)
+            {
+                <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 1rem; text-align: center; margin-top: 0.5rem;">
+                    <div style="font-size: 0.9rem; font-weight: 700; color: var(--accent-purple);">✨ Generating AI Portrait...</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem;">Contacting Pollinations AI free neural renderer. Please wait...</div>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(_generatedImagePath))
+            {
+                <div style="background: #0f172a; border: 1px solid var(--accent-green); border-radius: 6px; padding: 0.75rem; text-align: center; margin-top: 0.5rem;">
+                    <img src="@_generatedImagePath" style="max-width: 200px; height: auto; border-radius: 8px; border: 1px solid var(--border-highlight);" alt="Generated Portrait" />
+                    <div style="font-size: 0.72rem; color: var(--accent-green); font-weight: 600; margin-top: 0.4rem;">✅ AI Portrait Generated Successfully!</div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div style="color: var(--accent-rose); font-size: 0.75rem; font-weight: 600; margin-top: 0.4rem;">@_errorMessage</div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" @onclick="Close">Cancel</button>
+            <button class="btn btn-primary" disabled="@_isGenerating" @onclick="Generate">✨ Generate AI Art</button>
+            @if (!string.IsNullOrEmpty(_generatedImagePath))
+            {
+                <button class="btn btn-success" @onclick="Apply">Apply to Stage ➔</button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string SlotName { get; set; } = "Slot A";
+    [Parameter] public EventCallback<string> OnPortraitGenerated { get; set; }
+
+    private string _prompt = "Cyberpunk security officer female with glowing cyan visor, high quality detailed digital art";
+    private bool _isGenerating = false;
+    private string _generatedImagePath = "";
+    private string _errorMessage = "";
+
+    private async Task Generate()
+    {
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _errorMessage = "Please enter an appearance prompt description.";
+            return;
+        }
+
+        _isGenerating = true;
+        _errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            string slug = SlotName.ToLower().Replace(" ", "_");
+            _generatedImagePath = await AiImageGeneratorService.GeneratePortraitAsync(_prompt, slug);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Generation failed: {ex.Message}";
+        }
+        finally
+        {
+            _isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Apply()
+    {
+        OnPortraitGenerated.InvokeAsync(_generatedImagePath);
+    }
+
+    private void Close()
+    {
+        OnPortraitGenerated.InvokeAsync("");
+    }
+}

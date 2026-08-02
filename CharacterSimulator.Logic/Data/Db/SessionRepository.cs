@@ -208,4 +208,58 @@ public class SessionRepository
         }
         return list;
     }
+
+    public List<string> GetSessionParticipants(string sessionId)
+    {
+        var list = new List<string>();
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT character_slug
+            FROM session_participants
+            WHERE session_id = @sid
+            ORDER BY slot_order ASC;";
+        cmd.Parameters.AddWithValue("@sid", sessionId);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            list.Add(reader.GetString(0));
+        }
+        return list;
+    }
+
+    public bool DeleteSession(string sessionId)
+    {
+        using var tx = _conn.BeginTransaction();
+        try
+        {
+            using (var cmd = _conn.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = "DELETE FROM session_turns WHERE session_id = @sid;";
+                cmd.Parameters.AddWithValue("@sid", sessionId);
+                cmd.ExecuteNonQuery();
+            }
+            using (var cmd = _conn.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = "DELETE FROM session_participants WHERE session_id = @sid;";
+                cmd.Parameters.AddWithValue("@sid", sessionId);
+                cmd.ExecuteNonQuery();
+            }
+            using (var cmd = _conn.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = "DELETE FROM sessions WHERE id = @sid;";
+                cmd.Parameters.AddWithValue("@sid", sessionId);
+                cmd.ExecuteNonQuery();
+            }
+            tx.Commit();
+            return true;
+        }
+        catch
+        {
+            tx.Rollback();
+            return false;
+        }
+    }
 }

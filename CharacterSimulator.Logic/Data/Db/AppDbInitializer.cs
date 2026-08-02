@@ -55,6 +55,7 @@ public static class AppDbInitializer
                 dob_day INTEGER NOT NULL,
                 pin_hash TEXT,
                 pin_salt TEXT,
+                recovery_code TEXT,
                 is_adult_attested INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 last_opened_at TEXT NOT NULL
@@ -125,5 +126,13 @@ public static class AppDbInitializer
             INSERT OR IGNORE INTO schema_info (version, updated_at) VALUES (1, datetime('now'));
         ";
         cmd.ExecuteNonQuery();
+
+        try
+        {
+            using var alterCmd = conn.CreateCommand();
+            alterCmd.CommandText = "ALTER TABLE profiles ADD COLUMN recovery_code TEXT;";
+            alterCmd.ExecuteNonQuery();
+        }
+        catch { }
     }
 }
