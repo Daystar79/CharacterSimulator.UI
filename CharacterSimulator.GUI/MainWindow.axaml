@@ -30,6 +30,13 @@
                     <MenuItem Header="🤖 Auto-Play Mode" Click="OnSetAutoPlayMode"/>
                     <MenuItem Header="🎮 Player-Guided Mode" Click="OnSetPlayerGuidedMode"/>
                 </MenuItem>
+                <MenuItem Header="⏯ Playback" Foreground="#F8FAFC">
+                    <MenuItem Header="▶ Play" Click="OnPlayClicked"/>
+                    <MenuItem Header="⏸ Pause" Click="OnPauseClicked"/>
+                    <MenuItem Header="⏭ Step" Click="OnStepClicked"/>
+                    <Separator/>
+                    <MenuItem Header="⏹ Stop" Click="OnStopClicked"/>
+                </MenuItem>
             </Menu>
         </Border>
 
@@ -51,18 +58,23 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Right: Playback Buttons Strip & Speed Controls -->
+                <!-- Right: Primary Play Button, Secondary Dropdown & Speed Controls -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     
-                    <!-- Playback Buttons Strip -->
-                    <Border Background="#0F172A" CornerRadius="6" Padding="3" BorderBrush="#475569" BorderThickness="1">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Button Name="BtnPlay" Content="▶ Play" Background="#16A34A" Foreground="White" FontWeight="Bold" Padding="10,5" CornerRadius="4" Click="OnPlayClicked"/>
-                            <Button Name="BtnPause" Content="⏸ Pause" Background="#D97706" Foreground="White" FontWeight="Bold" Padding="10,5" CornerRadius="4" IsEnabled="False" Click="OnPauseClicked"/>
-                            <Button Name="BtnStep" Content="⏭ Step" Background="#2563EB" Foreground="White" FontWeight="Bold" Padding="10,5" CornerRadius="4" Click="OnStepClicked"/>
-                            <Button Name="BtnStop" Content="⏹ Stop" Background="#DC2626" Foreground="White" FontWeight="Bold" Padding="10,5" CornerRadius="4" IsEnabled="False" Click="OnStopClicked"/>
-                        </StackPanel>
-                    </Border>
+                    <!-- Primary Play Button -->
+                    <Button Name="BtnPlay" Content="▶ Play" Background="#16A34A" Foreground="White" FontWeight="Bold" Padding="12,5" CornerRadius="4" Click="OnPlayClicked"/>
+
+                    <!-- Secondary Playback Controls Dropdown Menu -->
+                    <Button Name="BtnPlaybackOptions" Content="⚙️ Controls ▾" Background="#0F172A" Foreground="#CBD5E1" FontSize="11" Padding="8,5" CornerRadius="4" BorderBrush="#475569" BorderThickness="1">
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Name="BtnPause" Header="⏸ Pause Simulation" Click="OnPauseClicked" IsEnabled="False"/>
+                                <MenuItem Name="BtnStep" Header="⏭ Step (Single Turn)" Click="OnStepClicked"/>
+                                <Separator/>
+                                <MenuItem Name="BtnStop" Header="⏹ Stop Simulation" Click="OnStopClicked" IsEnabled="False"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
 
                     <Separator Width="1" Height="18" Background="#475569" Margin="4,0"/>
 
