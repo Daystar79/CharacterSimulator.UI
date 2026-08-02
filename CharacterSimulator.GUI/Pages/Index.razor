@@ -4,120 +4,21 @@
 
 <div class="workspace-grid">
     
-    <!-- LEFT PANEL: CHARACTER A & DIAGNOSTICS LOG -->
+    <!-- LEFT PANEL: SYSTEM DIAGNOSTICS & OUTPUT LOG -->
     <div class="character-panel">
-        <!-- TAB HEADER -->
-        <div class="panel-tabs-header">
-            <button class="panel-tab-btn @(_leftPanelTab == "Character" ? "active" : "")" @onclick='() => _leftPanelTab = "Character"'>
-                🖼️ CHARACTER CARD
-            </button>
-            <button class="panel-tab-btn @(_leftPanelTab == "Log" ? "active" : "")" @onclick='() => _leftPanelTab = "Log"'>
-                📜 OUTPUT LOG
-            </button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span class="section-title" style="margin: 0; color: var(--accent-blue);">📜 DIAGNOSTICS & OUTPUT LOG</span>
+            <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="ClearLogs">Clear</button>
         </div>
-
-        @if (_leftPanelTab == "Character")
-        {
-            <div class="portrait-container">
-                @if (!string.IsNullOrEmpty(_charAAvatarPath) && (System.IO.File.Exists(_charAAvatarPath) || _charAAvatarPath.StartsWith("http")))
-                {
-                    <img class="portrait-img" src="@_charAAvatarPath" alt="@_charAName" />
-                }
-                else
-                {
-                    <div class="canvas-fallback">
-                        <div class="canvas-avatar-icon">👤</div>
-                        <div class="canvas-char-name">@_charAName</div>
-                        <div class="canvas-bio">@_charABio</div>
-                    </div>
-                }
-                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot A")'>✨ Generate AI Art</button>
-            </div>
-
-            <!-- TELEMETRY METERS -->
-            <div class="telemetry-section">
-                <div class="meter-group">
-                    <div class="meter-header">
-                        <span>STRESS TELEMETRY</span>
-                        <span style="color: var(--accent-amber);">@_charAStress / 100</span>
-                    </div>
-                    <div class="meter-bar">
-                        <div class="meter-fill-stress" style="width: @(_charAStress)%"></div>
-                    </div>
+        <div class="output-log-container" id="outputLogBox">
+            @foreach (var entry in _outputLogs)
+            {
+                <div class="log-entry @entry.LevelClass">
+                    <span class="log-time">[@entry.Timestamp.ToString("HH:mm:ss")]</span>
+                    <span>@entry.Message</span>
                 </div>
-                <div class="meter-group">
-                    <div class="meter-header">
-                        <span>AROUSAL TELEMETRY</span>
-                        <span style="color: var(--accent-purple);">@_charAArousal / 100</span>
-                    </div>
-                    <div class="meter-bar">
-                        <div class="meter-fill-arousal" style="width: @(_charAArousal)%"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- GOALS -->
-            <div>
-                <div class="section-title">
-                    <span>🎯</span>
-                    <span>ACTIVE GOALS</span>
-                </div>
-                <div class="goals-list">
-                    @if (_charAGoals.Count == 0)
-                    {
-                        <div style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">No active goals assigned</div>
-                    }
-                    else
-                    {
-                        @foreach (var g in _charAGoals)
-                        {
-                            <div class="goal-card">
-                                <div class="goal-name">@g.Name</div>
-                                <div class="goal-desc">@g.Description</div>
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-
-            <!-- ACTIVE SKILLS -->
-            <div>
-                <div class="section-title">
-                    <span>⚡</span>
-                    <span>ACTIVE SKILLS & STANCES</span>
-                </div>
-                <div class="tags-cloud">
-                    @if (_charASkills.Count == 0)
-                    {
-                        <span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">None</span>
-                    }
-                    else
-                    {
-                        @foreach (var s in _charASkills)
-                        {
-                            <span class="tag-chip">@s</span>
-                        }
-                    }
-                </div>
-            </div>
-        }
-        else
-        {
-            <!-- OUTPUT LOG TERMINAL VIEW -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <span class="section-title" style="margin: 0;">📜 DIAGNOSTICS & SYSTEM LOG</span>
-                <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="ClearLogs">Clear</button>
-            </div>
-            <div class="output-log-container" id="outputLogBox">
-                @foreach (var entry in _outputLogs)
-                {
-                    <div class="log-entry @entry.LevelClass">
-                        <span class="log-time">[@entry.Timestamp.ToString("HH:mm:ss")]</span>
-                        <span>@entry.Message</span>
-                    </div>
-                }
-            </div>
-        }
+            }
+        </div>
     </div>
 
     <!-- CENTER PANEL: DIALOGUE FEED -->
@@ -153,90 +54,146 @@
         </div>
     </div>
 
-    <!-- RIGHT PANEL: CHARACTER B -->
+    <!-- RIGHT PANEL: TABBED CHARACTER CARDS & TURN HISTORY -->
     <div class="character-panel character-panel-right">
-        <div class="portrait-container">
-            @if (!string.IsNullOrEmpty(_charBAvatarPath) && (System.IO.File.Exists(_charBAvatarPath) || _charBAvatarPath.StartsWith("http")))
+        <!-- TAB HEADER -->
+        <div class="panel-tabs-header">
+            <button class="panel-tab-btn @(_rightPanelTab == "Character" ? "active" : "")" @onclick='() => _rightPanelTab = "Character"'>
+                🖼️ CHARACTER CARDS
+            </button>
+            <button class="panel-tab-btn @(_rightPanelTab == "History" ? "active" : "")" @onclick='() => _rightPanelTab = "History"'>
+                📜 TURN HISTORY
+            </button>
+        </div>
+
+        @if (_rightPanelTab == "Character")
+        {
+            @if (!IsAnyCharacterLoaded)
             {
-                <img class="portrait-img" src="@_charBAvatarPath" alt="@_charBName" />
+                <div class="canvas-fallback" style="padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
+                    <div class="canvas-avatar-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎭</div>
+                    <div class="canvas-char-name" style="color: var(--accent-amber); font-weight: 700;">No Character Loaded</div>
+                    <div class="canvas-bio" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        No character card is assigned to the active stage.<br/>
+                        Click <b>File ➔ Simulation Setup</b> to load character cards.
+                    </div>
+                </div>
             }
             else
             {
-                <div class="canvas-fallback">
-                    <div class="canvas-avatar-icon">👤</div>
-                    <div class="canvas-char-name">@_charBName</div>
-                    <div class="canvas-bio">@_charBBio</div>
-                </div>
-            }
-            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot B")'>✨ Generate AI Art</button>
-        </div>
-
-        <!-- TELEMETRY METERS -->
-        <div class="telemetry-section">
-            <div class="meter-group">
-                <div class="meter-header">
-                    <span>STRESS TELEMETRY</span>
-                    <span style="color: var(--accent-amber);">@_charBStress / 100</span>
-                </div>
-                <div class="meter-bar">
-                    <div class="meter-fill-stress" style="width: @(_charBStress)%"></div>
-                </div>
-            </div>
-            <div class="meter-group">
-                <div class="meter-header">
-                    <span>AROUSAL TELEMETRY</span>
-                    <span style="color: var(--accent-purple);">@_charBArousal / 100</span>
-                </div>
-                <div class="meter-bar">
-                    <div class="meter-fill-arousal" style="width: @(_charBArousal)%"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- GOALS -->
-        <div>
-            <div class="section-title">
-                <span>🎯</span>
-                <span>ACTIVE GOALS</span>
-            </div>
-            <div class="goals-list">
-                @if (_charBGoals.Count == 0)
-                {
-                    <div style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">No active goals assigned</div>
-                }
-                else
-                {
-                    @foreach (var g in _charBGoals)
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    @if (_isCharALoaded)
                     {
-                        <div class="goal-card">
-                            <div class="goal-name">@g.Name</div>
-                            <div class="goal-desc">@g.Description</div>
+                        <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.5rem; background: #0f172a;">
+                            <div class="portrait-container">
+                                @if (!string.IsNullOrEmpty(_charAAvatarPath) && (System.IO.File.Exists(_charAAvatarPath) || _charAAvatarPath.StartsWith("http")))
+                                {
+                                    <img class="portrait-img" src="@_charAAvatarPath" alt="@_charAName" />
+                                }
+                                else
+                                {
+                                    <div class="canvas-fallback">
+                                        <div class="canvas-avatar-icon">👤</div>
+                                        <div class="canvas-char-name">@_charAName</div>
+                                        <div class="canvas-bio">@_charABio</div>
+                                    </div>
+                                }
+                                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot A")'>✨ Generate AI Art</button>
+                            </div>
+
+                            <div class="telemetry-section" style="margin-top: 0.5rem;">
+                                <div class="meter-group">
+                                    <div class="meter-header">
+                                        <span>STRESS TELEMETRY</span>
+                                        <span style="color: var(--accent-amber);">@_charAStress / 100</span>
+                                    </div>
+                                    <div class="meter-bar">
+                                        <div class="meter-fill-stress" style="width: @(_charAStress)%"></div>
+                                    </div>
+                                </div>
+                                <div class="meter-group">
+                                    <div class="meter-header">
+                                        <span>AROUSAL TELEMETRY</span>
+                                        <span style="color: var(--accent-purple);">@_charAArousal / 100</span>
+                                    </div>
+                                    <div class="meter-bar">
+                                        <div class="meter-fill-arousal" style="width: @(_charAArousal)%"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     }
-                }
-            </div>
-        </div>
 
-        <!-- ACTIVE SKILLS -->
-        <div>
-            <div class="section-title">
-                <span>⚡</span>
-                <span>ACTIVE SKILLS & STANCES</span>
-            </div>
-            <div class="tags-cloud">
-                @if (_charBSkills.Count == 0)
-                {
-                    <span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">None</span>
-                }
-                else
-                {
-                    @foreach (var s in _charBSkills)
+                    @if (_isCharBLoaded)
                     {
-                        <span class="tag-chip">@s</span>
+                        <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.5rem; background: #0f172a;">
+                            <div class="portrait-container">
+                                @if (!string.IsNullOrEmpty(_charBAvatarPath) && (System.IO.File.Exists(_charBAvatarPath) || _charBAvatarPath.StartsWith("http")))
+                                {
+                                    <img class="portrait-img" src="@_charBAvatarPath" alt="@_charBName" />
+                                }
+                                else
+                                {
+                                    <div class="canvas-fallback">
+                                        <div class="canvas-avatar-icon">👤</div>
+                                        <div class="canvas-char-name">@_charBName</div>
+                                        <div class="canvas-bio">@_charBBio</div>
+                                    </div>
+                                }
+                                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot B")'>✨ Generate AI Art</button>
+                            </div>
+
+                            <div class="telemetry-section" style="margin-top: 0.5rem;">
+                                <div class="meter-group">
+                                    <div class="meter-header">
+                                        <span>STRESS TELEMETRY</span>
+                                        <span style="color: var(--accent-amber);">@_charBStress / 100</span>
+                                    </div>
+                                    <div class="meter-bar">
+                                        <div class="meter-fill-stress" style="width: @(_charBStress)%"></div>
+                                    </div>
+                                </div>
+                                <div class="meter-group">
+                                    <div class="meter-header">
+                                        <span>AROUSAL TELEMETRY</span>
+                                        <span style="color: var(--accent-purple);">@_charBArousal / 100</span>
+                                    </div>
+                                    <div class="meter-bar">
+                                        <div class="meter-fill-arousal" style="width: @(_charBArousal)%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     }
+                </div>
+            }
+        }
+        else
+        {
+            <!-- TURN HISTORY TAB VIEW -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <span class="section-title" style="margin: 0;">📜 TURN HISTORY LOG</span>
+                <span style="font-size: 0.68rem; color: var(--text-muted);">Total Turns: @_dialogueFeed.Count</span>
+            </div>
+            <div class="output-log-container">
+                @for (int i = 0; i < _dialogueFeed.Count; i++)
+                {
+                    var turn = _dialogueFeed[i];
+                    <div style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
+                        <div style="font-weight: 700; color: @turn.SpeakerColor; font-size: 0.7rem;">
+                            Turn #@(i + 1): @turn.SpeakerName @(turn.IsSystem ? "" : $"➔ {turn.TargetName}")
+                        </div>
+                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                            @turn.Dialogue
+                        </div>
+                        @if (!string.IsNullOrEmpty(turn.BondDeltaText))
+                        {
+                            <div style="font-size: 0.65rem; color: var(--accent-purple); margin-top: 0.1rem;">🔗 @turn.BondDeltaText</div>
+                        }
+                    </div>
                 }
             </div>
-        </div>
+        }
     </div>
 
 </div>
@@ -249,9 +206,13 @@
 @implements IDisposable
 
 @code {
-    private string _leftPanelTab = "Character";
+    private string _rightPanelTab = "Character";
     private bool _showGeneratePortraitModal = false;
     private string _targetPortraitSlot = "Slot A";
+
+    private bool _isCharALoaded => !string.IsNullOrEmpty(_charAName) && _charAName != "(No Character Selected)";
+    private bool _isCharBLoaded => !string.IsNullOrEmpty(_charBName) && _charBName != "(No Character Selected)";
+    private bool IsAnyCharacterLoaded => _isCharALoaded || _isCharBLoaded;
 
     private List<LogEntryModel> _outputLogs = new()
     {
