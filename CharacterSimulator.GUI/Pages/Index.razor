@@ -401,6 +401,7 @@
     protected override void OnInitialized()
     {
         ControlContext.OnUIUpdated += OnBackgroundAutoRefresh;
+        ControlContext.OnSettingsChanged += OnSettingsUpdated;
 
         var catalog = CharacterCatalog.ListCardFileNames();
         _characterDropdownOptions = new List<CustomSelect.DropdownOption>
@@ -416,11 +417,31 @@
         {
             SelectCharacterCard("Slot A", catalog[0]);
         }
+
+        if (ControlContext.CurrentSettings != null)
+        {
+            OnSettingsUpdated(ControlContext.CurrentSettings);
+        }
     }
 
     public void Dispose()
     {
         ControlContext.OnUIUpdated -= OnBackgroundAutoRefresh;
+        ControlContext.OnSettingsChanged -= OnSettingsUpdated;
+    }
+
+    private void OnSettingsUpdated(AppSettings settings)
+    {
+        InvokeAsync(() =>
+        {
+            _outputLogs.Add(new LogEntryModel
+            {
+                Timestamp = DateTime.Now,
+                Message = $"⚙️ Engine Settings Active — Roleplay: {settings.RoleplayLlmProvider} ({settings.RoleplayModelIdentifier}) | Image: {settings.ImageEngine} ({settings.ImageResolution}) | Mode: {settings.RoleplayMode}",
+                LevelClass = "log-info"
+            });
+            StateHasChanged();
+        });
     }
 
     private void OnBackgroundAutoRefresh()

@@ -20,8 +20,19 @@ public class TurnControlContext
     public SimulationState State { get; private set; } = SimulationState.Ready;
     public int DelayMs { get; set; } = 600;
 
+    public AppSettings CurrentSettings { get; private set; } = AppConfigService.LoadSettings();
+
     public event Action<SimulationState>? OnStateChanged;
     public event Action? OnUIUpdated;
+    public event Action<AppSettings>? OnSettingsChanged;
+
+    public void UpdateSettings(AppSettings settings)
+    {
+        CurrentSettings = settings;
+        AppConfigService.SaveSettings(settings);
+        OnSettingsChanged?.Invoke(settings);
+        OnUIUpdated?.Invoke();
+    }
 
     public void NotifyUIUpdate()
     {

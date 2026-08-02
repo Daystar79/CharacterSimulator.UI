@@ -253,7 +253,7 @@
             ImageEngine = _selectedImageEngine,
             ImageResolution = _imageResolution
         };
-        AppConfigService.SaveSettings(settings);
+        ControlContext.UpdateSettings(settings);
     }
 
     private void Close()

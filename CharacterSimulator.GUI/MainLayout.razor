@@ -164,8 +164,10 @@
     protected override void OnInitialized()
     {
         UpdateActiveProfileBadge();
+        ApplySettings(ControlContext.CurrentSettings);
         ControlContext.OnStateChanged += OnSimulationStateChanged;
         ControlContext.OnUIUpdated += OnUIAutoRefresh;
+        ControlContext.OnSettingsChanged += OnSettingsUpdated;
         ProfileSvc.OnActiveProfileChanged += OnProfileAutoRefresh;
     }
 
@@ -173,7 +175,23 @@
     {
         ControlContext.OnStateChanged -= OnSimulationStateChanged;
         ControlContext.OnUIUpdated -= OnUIAutoRefresh;
+        ControlContext.OnSettingsChanged -= OnSettingsUpdated;
         ProfileSvc.OnActiveProfileChanged -= OnProfileAutoRefresh;
+    }
+
+    private void OnSettingsUpdated(AppSettings settings)
+    {
+        InvokeAsync(() => ApplySettings(settings));
+    }
+
+    private void ApplySettings(AppSettings settings)
+    {
+        if (settings == null) return;
+        _activeModeBadge = settings.RoleplayMode == "AutoPlay" ? "🤖 Auto-Play" : "🎮 Player-Guided";
+        _activeSceneContext = $"[{settings.SelectedGenre}] {settings.ScenePrompt}";
+        _activeLlmInfo = $"Roleplay: {settings.RoleplayLlmProvider} ({settings.RoleplayModelIdentifier}) | Image: {settings.ImageEngine}";
+        _statusText = $"Active Engine: {settings.RoleplayLlmProvider} ({settings.RoleplayModelIdentifier}) / {settings.ImageEngine}";
+        StateHasChanged();
     }
 
     private void OnUIAutoRefresh()
