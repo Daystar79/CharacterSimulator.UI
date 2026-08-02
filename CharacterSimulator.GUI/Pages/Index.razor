@@ -50,12 +50,19 @@
                 <span>ACTIVE GOALS</span>
             </div>
             <div class="goals-list">
-                @foreach (var g in _charAGoals)
+                @if (_charAGoals.Count == 0)
                 {
-                    <div class="goal-card">
-                        <div class="goal-name">@g.Name</div>
-                        <div class="goal-desc">@g.Description</div>
-                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">No active goals assigned</div>
+                }
+                else
+                {
+                    @foreach (var g in _charAGoals)
+                    {
+                        <div class="goal-card">
+                            <div class="goal-name">@g.Name</div>
+                            <div class="goal-desc">@g.Description</div>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -67,9 +74,16 @@
                 <span>ACTIVE SKILLS & STANCES</span>
             </div>
             <div class="tags-cloud">
-                @foreach (var s in _charASkills)
+                @if (_charASkills.Count == 0)
                 {
-                    <span class="tag-chip">@s</span>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">None</span>
+                }
+                else
+                {
+                    @foreach (var s in _charASkills)
+                    {
+                        <span class="tag-chip">@s</span>
+                    }
                 }
             </div>
         </div>
@@ -154,12 +168,19 @@
                 <span>ACTIVE GOALS</span>
             </div>
             <div class="goals-list">
-                @foreach (var g in _charBGoals)
+                @if (_charBGoals.Count == 0)
                 {
-                    <div class="goal-card">
-                        <div class="goal-name">@g.Name</div>
-                        <div class="goal-desc">@g.Description</div>
-                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">No active goals assigned</div>
+                }
+                else
+                {
+                    @foreach (var g in _charBGoals)
+                    {
+                        <div class="goal-card">
+                            <div class="goal-name">@g.Name</div>
+                            <div class="goal-desc">@g.Description</div>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -171,9 +192,16 @@
                 <span>ACTIVE SKILLS & STANCES</span>
             </div>
             <div class="tags-cloud">
-                @foreach (var s in _charBSkills)
+                @if (_charBSkills.Count == 0)
                 {
-                    <span class="tag-chip">@s</span>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">None</span>
+                }
+                else
+                {
+                    @foreach (var s in _charBSkills)
+                    {
+                        <span class="tag-chip">@s</span>
+                    }
                 }
             </div>
         </div>
@@ -182,36 +210,26 @@
 </div>
 
 @code {
-    private string _charAName = "Serena Vance";
-    private string _charABio = "Skilled legal auditor & security analyst";
+    private string _charAName = "(No Character Selected)";
+    private string _charABio = "No character card assigned to Slot A. Open File ➔ Simulation Setup to select a character.";
     private string _charAAvatarPath = "";
-    private int _charAStress = 25;
-    private int _charAArousal = 15;
-    private List<GoalItem> _charAGoals = new()
-    {
-        new("Maintain Protocol", "Ensure security compliance across all sectors"),
-        new("Deepen Alliance", "Build trust with Kira")
-    };
-    private List<string> _charASkills = new() { "Legal Auditing", "Kinesiology", "Defensive Stance" };
+    private int _charAStress = 0;
+    private int _charAArousal = 0;
+    private List<GoalItem> _charAGoals = new();
+    private List<string> _charASkills = new();
 
-    private string _charBName = "Kira Nerys";
-    private string _charBBio = "Tactical commander & field operative";
+    private string _charBName = "(No Character Selected)";
+    private string _charBBio = "No character card assigned to Slot B. Open File ➔ Simulation Setup to select a character.";
     private string _charBAvatarPath = "";
-    private int _charBStress = 35;
-    private int _charBArousal = 20;
-    private List<GoalItem> _charBGoals = new()
-    {
-        new("Perimeter Defense", "Monitor squad telemetry and perimeter breach points"),
-        new("Resource Audit", "Inspect supply caches")
-    };
-    private List<string> _charBSkills = new() { "Tactical Recon", "Field Leadership", "Aggressive Stance" };
+    private int _charBStress = 0;
+    private int _charBArousal = 0;
+    private List<GoalItem> _charBGoals = new();
+    private List<string> _charBSkills = new();
 
     private string _playerInput = "";
     private List<ChatMessageModel> _dialogueFeed = new()
     {
-        new ChatMessageModel { SpeakerName = "System", Dialogue = "Stage initialized. Ready for roleplay simulation.", IsSystem = true },
-        new ChatMessageModel { SpeakerName = "Serena", TargetName = "Kira", Dialogue = "Perimeter telemetry looks clear. Let's begin the security audit.", SpeakerColor = "#38BDF8", IsLeft = true, SomaticText = "adjusts datapad", SpeakerEmotionEmoji = "📑" },
-        new ChatMessageModel { SpeakerName = "Kira", TargetName = "Serena", Dialogue = "Acknowledged. Squad status is nominal.", SpeakerColor = "#C084FC", IsLeft = false, SomaticText = "nods firmly", SpeakerEmotionEmoji = "🫡", BondDeltaText = "+2 (Bond: 12)" }
+        new ChatMessageModel { SpeakerName = "System", Dialogue = "Stage initialized (No Characters Loaded). Open File ➔ Simulation Setup to assign characters.", IsSystem = true }
     };
 
     private void OnPlayerInputKeyUp(KeyboardEventArgs e)
