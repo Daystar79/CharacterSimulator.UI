@@ -21,6 +21,12 @@ public class TurnControlContext
     public int DelayMs { get; set; } = 600;
 
     public event Action<SimulationState>? OnStateChanged;
+    public event Action? OnUIUpdated;
+
+    public void NotifyUIUpdate()
+    {
+        OnUIUpdated?.Invoke();
+    }
 
     public CancellationToken CancellationToken => _cts.Token;
 

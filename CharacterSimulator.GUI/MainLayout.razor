@@ -123,6 +123,8 @@
     <SimulationSetupModal OnClosed="OnSetupModalClosed" />
 }
 
+@implements IDisposable
+
 @code {
     private string _statusBadgeText = "READY";
     private string StatusBadgeClass => _statusBadgeText switch
@@ -150,6 +152,29 @@
     {
         UpdateActiveProfileBadge();
         ControlContext.OnStateChanged += OnSimulationStateChanged;
+        ControlContext.OnUIUpdated += OnUIAutoRefresh;
+        ProfileSvc.OnActiveProfileChanged += OnProfileAutoRefresh;
+    }
+
+    public void Dispose()
+    {
+        ControlContext.OnStateChanged -= OnSimulationStateChanged;
+        ControlContext.OnUIUpdated -= OnUIAutoRefresh;
+        ProfileSvc.OnActiveProfileChanged -= OnProfileAutoRefresh;
+    }
+
+    private void OnUIAutoRefresh()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnProfileAutoRefresh(UserProfile? profile)
+    {
+        InvokeAsync(() =>
+        {
+            UpdateActiveProfileBadge();
+            StateHasChanged();
+        });
     }
 
     private void UpdateActiveProfileBadge()

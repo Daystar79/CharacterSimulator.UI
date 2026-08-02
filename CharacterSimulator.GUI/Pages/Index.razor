@@ -209,6 +209,8 @@
 
 </div>
 
+@implements IDisposable
+
 @code {
     private string _charAName = "(No Character Selected)";
     private string _charABio = "No character card assigned to Slot A. Open File ➔ Simulation Setup to select a character.";
@@ -231,6 +233,25 @@
     {
         new ChatMessageModel { SpeakerName = "System", Dialogue = "Stage initialized (No Characters Loaded). Open File ➔ Simulation Setup to assign characters.", IsSystem = true }
     };
+
+    protected override void OnInitialized()
+    {
+        ControlContext.OnUIUpdated += OnBackgroundAutoRefresh;
+    }
+
+    public void Dispose()
+    {
+        ControlContext.OnUIUpdated -= OnBackgroundAutoRefresh;
+    }
+
+    private void OnBackgroundAutoRefresh()
+    {
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+            _ = JS.InvokeVoidAsync("scrollFeedToBottom", "dialogueFeed");
+        });
+    }
 
     private void OnPlayerInputKeyUp(KeyboardEventArgs e)
     {

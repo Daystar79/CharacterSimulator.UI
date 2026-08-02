@@ -31,6 +31,8 @@ public class ProfileService
     private readonly SessionRepository _sessionRepo;
     private readonly CharacterProgressRepository _progressRepo;
 
+    public event Action<UserProfile?>? OnActiveProfileChanged;
+
     public UserProfile? ActiveProfile { get; private set; }
 
     public ProfileService(string? dbPath = null)
@@ -57,6 +59,7 @@ public class ProfileService
         {
             ActiveProfile = profiles[0];
         }
+        OnActiveProfileChanged?.Invoke(ActiveProfile);
     }
 
     public List<UserProfile> GetAllProfiles() => _profileRepo.GetAllProfiles();
@@ -65,6 +68,7 @@ public class ProfileService
     {
         var profile = _profileRepo.CreateProfile(name, dobYear, dobMonth, dobDay, pin, adultAttested);
         ActiveProfile = profile;
+        OnActiveProfileChanged?.Invoke(ActiveProfile);
         return profile;
     }
 
@@ -77,6 +81,7 @@ public class ProfileService
 
         ActiveProfile = profile;
         _profileRepo.TouchLastOpened(profileId);
+        OnActiveProfileChanged?.Invoke(ActiveProfile);
         return true;
     }
 
@@ -87,6 +92,7 @@ public class ProfileService
         {
             var remaining = _profileRepo.GetAllProfiles();
             ActiveProfile = remaining.Count > 0 ? remaining[0] : null;
+            OnActiveProfileChanged?.Invoke(ActiveProfile);
         }
         return success;
     }
