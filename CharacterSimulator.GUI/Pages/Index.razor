@@ -145,130 +145,206 @@
 
         @if (_rightPanelTab == "CharA")
         {
-            <div style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
-                <div>
-                    @if (!_isCharALoaded)
-                    {
-                        <div class="canvas-fallback" style="padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
-                            <div class="canvas-avatar-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">👤</div>
-                            <div class="canvas-char-name" style="color: var(--accent-amber); font-weight: 700;">No Character Selected</div>
-                            <div class="canvas-bio" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
-                                Select a character card from the dropdown below to load Character A onto the stage.
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.5rem; background: #0f172a;">
-                            <div class="portrait-container">
-                                @if (!string.IsNullOrEmpty(_charAAvatarPath) && (System.IO.File.Exists(_charAAvatarPath) || _charAAvatarPath.StartsWith("http")))
-                                {
-                                    <img class="portrait-img" src="@_charAAvatarPath" alt="@_charAName" />
-                                }
-                                else
-                                {
-                                    <div class="canvas-fallback">
-                                        <div class="canvas-avatar-icon">👤</div>
-                                        <div class="canvas-char-name">@_charAName</div>
-                                        <div class="canvas-bio">@_charABio</div>
-                                    </div>
-                                }
-                                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot A")'>✨ Generate AI Art</button>
-                            </div>
-
-                            <div class="telemetry-section" style="margin-top: 0.5rem;">
-                                <div class="meter-group">
-                                    <div class="meter-header">
-                                        <span>STRESS TELEMETRY</span>
-                                        <span style="color: var(--accent-amber);">@_charAStress / 100</span>
-                                    </div>
-                                    <div class="meter-bar">
-                                        <div class="meter-fill-stress" style="width: @(_charAStress)%"></div>
-                                    </div>
-                                </div>
-                                <div class="meter-group">
-                                    <div class="meter-header">
-                                        <span>AROUSAL TELEMETRY</span>
-                                        <span style="color: var(--accent-purple);">@_charAArousal / 100</span>
-                                    </div>
-                                    <div class="meter-bar">
-                                        <div class="meter-fill-arousal" style="width: @(_charAArousal)%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <!-- BOTTOM SELECTOR FOR CHARACTER A -->
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
-                    <label class="form-label" style="font-size: 0.68rem; color: var(--accent-blue); font-weight: 700;">📂 LOAD CHARACTER A CARD:</label>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; max-height: calc(100vh - 160px); padding-right: 0.25rem;">
+                <!-- TOP CHARACTER A SELECTOR -->
+                <div style="background: #0f172a; border: 1px solid var(--accent-blue); border-radius: 6px; padding: 0.5rem;">
+                    <label class="form-label" style="font-size: 0.68rem; color: var(--accent-blue); font-weight: 700; margin-bottom: 0.25rem;">📂 LOAD CHARACTER A CARD:</label>
                     <CustomSelect Value="@_selectedCharAFile" ValueChanged='(val => SelectCharacterCard("Slot A", val))' Options="_characterDropdownOptions" />
                 </div>
+
+                @if (!_isCharALoaded)
+                {
+                    <div class="canvas-fallback" style="padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
+                        <div class="canvas-avatar-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">👤</div>
+                        <div class="canvas-char-name" style="color: var(--accent-amber); font-weight: 700;">No Character Selected</div>
+                        <div class="canvas-bio" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Select a character card from the dropdown above to load Character A onto the stage.
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a;">
+                        <div class="portrait-container">
+                            @if (!string.IsNullOrEmpty(_charAAvatarPath) && (System.IO.File.Exists(_charAAvatarPath) || _charAAvatarPath.StartsWith("http")))
+                            {
+                                <img class="portrait-img" src="@_charAAvatarPath" alt="@_charAName" />
+                            }
+                            else
+                            {
+                                <div class="canvas-fallback">
+                                    <div class="canvas-avatar-icon">👤</div>
+                                    <div class="canvas-char-name">@_charAName @(_charAAge > 0 ? $"({_charAAge})" : "")</div>
+                                </div>
+                            }
+                            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot A")'>✨ Generate AI Art</button>
+                        </div>
+
+                        <!-- DESCRIPTION -->
+                        <div style="margin-top: 0.6rem;">
+                            <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.2rem;">📖 Persona & Description</div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px;">
+                                @_charADescription
+                            </div>
+                        </div>
+
+                        <!-- GOALS -->
+                        @if (_charAGoals != null && _charAGoals.Count > 0)
+                        {
+                            <div style="margin-top: 0.6rem;">
+                                <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-amber); text-transform: uppercase; margin-bottom: 0.2rem;">🎯 Active Goals</div>
+                                <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                    @foreach (var g in _charAGoals)
+                                    {
+                                        <div style="font-size: 0.68rem; color: var(--text-primary); background: rgba(245,158,11,0.08); border-left: 2px solid var(--accent-amber); padding: 0.2rem 0.4rem; border-radius: 2px;">
+                                            • @g
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- LIKES & SKILLS -->
+                        @if (_charASkills != null && _charASkills.Count > 0)
+                        {
+                            <div style="margin-top: 0.6rem;">
+                                <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 0.25rem;">✨ Likes & Specializations</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                    @foreach (var s in _charASkills)
+                                    {
+                                        <span style="background: #1e1b4b; color: #c084fc; border: 1px solid rgba(192,132,252,0.3); font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px;">
+                                            @s
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- TELEMETRY -->
+                        <div class="telemetry-section" style="margin-top: 0.6rem;">
+                            <div class="meter-group">
+                                <div class="meter-header">
+                                    <span>STRESS TELEMETRY</span>
+                                    <span style="color: var(--accent-amber);">@_charAStress / 100</span>
+                                </div>
+                                <div class="meter-bar">
+                                    <div class="meter-fill-stress" style="width: @(_charAStress)%"></div>
+                                </div>
+                            </div>
+                            <div class="meter-group">
+                                <div class="meter-header">
+                                    <span>AROUSAL TELEMETRY</span>
+                                    <span style="color: var(--accent-purple);">@_charAArousal / 100</span>
+                                </div>
+                                <div class="meter-bar">
+                                    <div class="meter-fill-arousal" style="width: @(_charAArousal)%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         }
         else if (_rightPanelTab == "CharB")
         {
-            <div style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
-                <div>
-                    @if (!_isCharBLoaded)
-                    {
-                        <div class="canvas-fallback" style="padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
-                            <div class="canvas-avatar-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">👤</div>
-                            <div class="canvas-char-name" style="color: var(--accent-amber); font-weight: 700;">No Character Selected</div>
-                            <div class="canvas-bio" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
-                                Select a character card from the dropdown below to load Character B onto the stage.
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.5rem; background: #0f172a;">
-                            <div class="portrait-container">
-                                @if (!string.IsNullOrEmpty(_charBAvatarPath) && (System.IO.File.Exists(_charBAvatarPath) || _charBAvatarPath.StartsWith("http")))
-                                {
-                                    <img class="portrait-img" src="@_charBAvatarPath" alt="@_charBName" />
-                                }
-                                else
-                                {
-                                    <div class="canvas-fallback">
-                                        <div class="canvas-avatar-icon">👤</div>
-                                        <div class="canvas-char-name">@_charBName</div>
-                                        <div class="canvas-bio">@_charBBio</div>
-                                    </div>
-                                }
-                                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot B")'>✨ Generate AI Art</button>
-                            </div>
-
-                            <div class="telemetry-section" style="margin-top: 0.5rem;">
-                                <div class="meter-group">
-                                    <div class="meter-header">
-                                        <span>STRESS TELEMETRY</span>
-                                        <span style="color: var(--accent-amber);">@_charBStress / 100</span>
-                                    </div>
-                                    <div class="meter-bar">
-                                        <div class="meter-fill-stress" style="width: @(_charBStress)%"></div>
-                                    </div>
-                                </div>
-                                <div class="meter-group">
-                                    <div class="meter-header">
-                                        <span>AROUSAL TELEMETRY</span>
-                                        <span style="color: var(--accent-purple);">@_charBArousal / 100</span>
-                                    </div>
-                                    <div class="meter-bar">
-                                        <div class="meter-fill-arousal" style="width: @(_charBArousal)%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <!-- BOTTOM SELECTOR FOR CHARACTER B -->
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
-                    <label class="form-label" style="font-size: 0.68rem; color: var(--accent-purple); font-weight: 700;">📂 LOAD CHARACTER B CARD:</label>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; max-height: calc(100vh - 160px); padding-right: 0.25rem;">
+                <!-- TOP CHARACTER B SELECTOR -->
+                <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 0.5rem;">
+                    <label class="form-label" style="font-size: 0.68rem; color: var(--accent-purple); font-weight: 700; margin-bottom: 0.25rem;">📂 LOAD CHARACTER B CARD:</label>
                     <CustomSelect Value="@_selectedCharBFile" ValueChanged='(val => SelectCharacterCard("Slot B", val))' Options="_characterDropdownOptions" />
                 </div>
+
+                @if (!_isCharBLoaded)
+                {
+                    <div class="canvas-fallback" style="padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
+                        <div class="canvas-avatar-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">👤</div>
+                        <div class="canvas-char-name" style="color: var(--accent-amber); font-weight: 700;">No Character Selected</div>
+                        <div class="canvas-bio" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Select a character card from the dropdown above to load Character B onto the stage.
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a;">
+                        <div class="portrait-container">
+                            @if (!string.IsNullOrEmpty(_charBAvatarPath) && (System.IO.File.Exists(_charBAvatarPath) || _charBAvatarPath.StartsWith("http")))
+                            {
+                                <img class="portrait-img" src="@_charBAvatarPath" alt="@_charBName" />
+                            }
+                            else
+                            {
+                                <div class="canvas-fallback">
+                                    <div class="canvas-avatar-icon">👤</div>
+                                    <div class="canvas-char-name">@_charBName @(_charBAge > 0 ? $"({_charBAge})" : "")</div>
+                                </div>
+                            }
+                            <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" @onclick='() => OpenGeneratePortraitModal("Slot B")'>✨ Generate AI Art</button>
+                        </div>
+
+                        <!-- DESCRIPTION -->
+                        <div style="margin-top: 0.6rem;">
+                            <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 0.2rem;">📖 Persona & Description</div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px;">
+                                @_charBDescription
+                            </div>
+                        </div>
+
+                        <!-- GOALS -->
+                        @if (_charBGoals != null && _charBGoals.Count > 0)
+                        {
+                            <div style="margin-top: 0.6rem;">
+                                <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-amber); text-transform: uppercase; margin-bottom: 0.2rem;">🎯 Active Goals</div>
+                                <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                    @foreach (var g in _charBGoals)
+                                    {
+                                        <div style="font-size: 0.68rem; color: var(--text-primary); background: rgba(245,158,11,0.08); border-left: 2px solid var(--accent-amber); padding: 0.2rem 0.4rem; border-radius: 2px;">
+                                            • @g
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- LIKES & SKILLS -->
+                        @if (_charBSkills != null && _charBSkills.Count > 0)
+                        {
+                            <div style="margin-top: 0.6rem;">
+                                <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 0.25rem;">✨ Likes & Specializations</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                    @foreach (var s in _charBSkills)
+                                    {
+                                        <span style="background: #1e1b4b; color: #c084fc; border: 1px solid rgba(192,132,252,0.3); font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px;">
+                                            @s
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- TELEMETRY -->
+                        <div class="telemetry-section" style="margin-top: 0.6rem;">
+                            <div class="meter-group">
+                                <div class="meter-header">
+                                    <span>STRESS TELEMETRY</span>
+                                    <span style="color: var(--accent-amber);">@_charBStress / 100</span>
+                                </div>
+                                <div class="meter-bar">
+                                    <div class="meter-fill-stress" style="width: @(_charBStress)%"></div>
+                                </div>
+                            </div>
+                            <div class="meter-group">
+                                <div class="meter-header">
+                                    <span>AROUSAL TELEMETRY</span>
+                                    <span style="color: var(--accent-purple);">@_charBArousal / 100</span>
+                                </div>
+                                <div class="meter-bar">
+                                    <div class="meter-fill-arousal" style="width: @(_charBArousal)%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         }
         else
@@ -354,8 +430,12 @@
             _selectedCharAFile = fileName;
             var info = CharacterCatalog.LoadCardDetails(fileName);
             _charAName = info.Name;
-            _charABio = info.Bio;
+            _charAAge = info.Age;
+            _charADescription = info.Description;
+            _charAPhysical = info.Physical;
             _charAAvatarPath = info.AvatarPath;
+            _charAGoals = info.Goals;
+            _charASkills = info.Skills;
             _charAStress = 15;
             _charAArousal = 10;
             _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = $"Loaded Character A card: {info.Name} ({fileName})", LevelClass = "log-success" });
@@ -366,8 +446,12 @@
             _selectedCharBFile = fileName;
             var info = CharacterCatalog.LoadCardDetails(fileName);
             _charBName = info.Name;
-            _charBBio = info.Bio;
+            _charBAge = info.Age;
+            _charBDescription = info.Description;
+            _charBPhysical = info.Physical;
             _charBAvatarPath = info.AvatarPath;
+            _charBGoals = info.Goals;
+            _charBSkills = info.Skills;
             _charBStress = 20;
             _charBArousal = 15;
             _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = $"Loaded Character B card: {info.Name} ({fileName})", LevelClass = "log-success" });
@@ -388,19 +472,23 @@
     };
 
     private string _charAName = "(No Character Selected)";
-    private string _charABio = "No character card assigned to Slot A. Open File ➔ Simulation Setup to select a character.";
+    private int _charAAge = 0;
+    private string _charADescription = "No character card loaded.";
+    private string _charAPhysical = "";
     private string _charAAvatarPath = "";
     private int _charAStress = 0;
     private int _charAArousal = 0;
-    private List<GoalItem> _charAGoals = new();
+    private List<string> _charAGoals = new();
     private List<string> _charASkills = new();
 
     private string _charBName = "(No Character Selected)";
-    private string _charBBio = "No character card assigned to Slot B. Open File ➔ Simulation Setup to select a character.";
+    private int _charBAge = 0;
+    private string _charBDescription = "No character card loaded.";
+    private string _charBPhysical = "";
     private string _charBAvatarPath = "";
     private int _charBStress = 0;
     private int _charBArousal = 0;
-    private List<GoalItem> _charBGoals = new();
+    private List<string> _charBGoals = new();
     private List<string> _charBSkills = new();
 
     private string _playerInput = "";
