@@ -4,21 +4,95 @@
 
 <div class="workspace-grid">
     
-    <!-- LEFT PANEL: SYSTEM DIAGNOSTICS & OUTPUT LOG -->
+    <!-- LEFT PANEL: 3 TABS (SCENE IMAGE / HISTORY / SYSTEM OUTPUT) -->
     <div class="character-panel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span class="section-title" style="margin: 0; color: var(--accent-blue);">📜 DIAGNOSTICS & OUTPUT LOG</span>
-            <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="ClearLogs">Clear</button>
+        <!-- TAB HEADER -->
+        <div class="panel-tabs-header">
+            <button class="panel-tab-btn @(_leftPanelTab == "Scene" ? "active" : "")" @onclick='() => _leftPanelTab = "Scene"'>
+                🖼️ SCENE IMAGE
+            </button>
+            <button class="panel-tab-btn @(_leftPanelTab == "History" ? "active" : "")" @onclick='() => _leftPanelTab = "History"'>
+                📜 HISTORY
+            </button>
+            <button class="panel-tab-btn @(_leftPanelTab == "System" ? "active" : "")" @onclick='() => _leftPanelTab = "System"'>
+                ⚙️ SYSTEM OUTPUT
+            </button>
         </div>
-        <div class="output-log-container" id="outputLogBox">
-            @foreach (var entry in _outputLogs)
-            {
-                <div class="log-entry @entry.LevelClass">
-                    <span class="log-time">[@entry.Timestamp.ToString("HH:mm:ss")]</span>
-                    <span>@entry.Message</span>
+
+        @if (_leftPanelTab == "Scene")
+        {
+            <!-- SCENE IMAGE VIEW -->
+            <div class="portrait-container">
+                @if (!string.IsNullOrEmpty(_sceneImagePath) && (System.IO.File.Exists(_sceneImagePath) || _sceneImagePath.StartsWith("http")))
+                {
+                    <img class="portrait-img" src="@_sceneImagePath" alt="Scene Location" style="aspect-ratio: 16/9; object-fit: cover;" />
+                }
+                else
+                {
+                    <div class="canvas-fallback" style="padding: 1.5rem 1rem;">
+                        <div class="canvas-avatar-icon" style="font-size: 2rem;">🏙️</div>
+                        <div class="canvas-char-name" style="font-size: 0.8rem;">Quiet City Apartment</div>
+                        <div class="canvas-bio" style="font-size: 0.7rem;">Midnight during a rainstorm. Warm ambient lighting.</div>
+                    </div>
+                }
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" disabled="@_isGeneratingScene" @onclick="GenerateSceneArtwork">
+                    @(_isGeneratingScene ? "✨ Rendering Scene..." : "✨ Generate Scene Artwork")
+                </button>
+            </div>
+
+            <div style="margin-top: 0.75rem; background: #0f172a; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.6rem;">
+                <div class="section-title" style="margin-bottom: 0.3rem; font-size: 0.7rem; color: var(--accent-amber);">
+                    <span>📍</span>
+                    <span>LOCATION & ATMOSPHERE</span>
                 </div>
-            }
-        </div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
+                    Contemporary urban apartment setting. Soft neon reflections on wet glass window panes.
+                </div>
+            </div>
+        }
+        else if (_leftPanelTab == "History")
+        {
+            <!-- SESSION TURN HISTORY VIEW -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <span class="section-title" style="margin: 0; color: var(--accent-blue);">📜 SESSION HISTORY LOG</span>
+                <span style="font-size: 0.68rem; color: var(--text-muted);">Turns: @_dialogueFeed.Count</span>
+            </div>
+            <div class="output-log-container">
+                @for (int i = 0; i < _dialogueFeed.Count; i++)
+                {
+                    var turn = _dialogueFeed[i];
+                    <div style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
+                        <div style="font-weight: 700; color: @turn.SpeakerColor; font-size: 0.7rem;">
+                            Turn #@(i + 1): @turn.SpeakerName @(turn.IsSystem ? "" : $"➔ {turn.TargetName}")
+                        </div>
+                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                            @turn.Dialogue
+                        </div>
+                        @if (!string.IsNullOrEmpty(turn.BondDeltaText))
+                        {
+                            <div style="font-size: 0.65rem; color: var(--accent-purple); margin-top: 0.1rem;">🔗 @turn.BondDeltaText</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <!-- SYSTEM OUTPUT LOG TERMINAL VIEW -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <span class="section-title" style="margin: 0; color: var(--accent-blue);">⚙️ SYSTEM DIAGNOSTICS & LOG</span>
+                <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="ClearLogs">Clear</button>
+            </div>
+            <div class="output-log-container" id="outputLogBox">
+                @foreach (var entry in _outputLogs)
+                {
+                    <div class="log-entry @entry.LevelClass">
+                        <span class="log-time">[@entry.Timestamp.ToString("HH:mm:ss")]</span>
+                        <span>@entry.Message</span>
+                    </div>
+                }
+            </div>
+        }
     </div>
 
     <!-- CENTER PANEL: DIALOGUE FEED -->
@@ -206,9 +280,28 @@
 @implements IDisposable
 
 @code {
+    private string _leftPanelTab = "Scene";
     private string _rightPanelTab = "Character";
     private bool _showGeneratePortraitModal = false;
     private string _targetPortraitSlot = "Slot A";
+    private string _sceneImagePath = "";
+    private bool _isGeneratingScene = false;
+
+    private async Task GenerateSceneArtwork()
+    {
+        _isGeneratingScene = true;
+        StateHasChanged();
+        try
+        {
+            _sceneImagePath = await CharacterSimulator.Logic.Services.AiImageGeneratorService.GeneratePortraitAsync("Contemporary quiet city apartment at midnight during a rainstorm, warm interior lights, neon city view", "scene_location");
+        }
+        catch { }
+        finally
+        {
+            _isGeneratingScene = false;
+            StateHasChanged();
+        }
+    }
 
     private bool _isCharALoaded => !string.IsNullOrEmpty(_charAName) && _charAName != "(No Character Selected)";
     private bool _isCharBLoaded => !string.IsNullOrEmpty(_charBName) && _charBName != "(No Character Selected)";
