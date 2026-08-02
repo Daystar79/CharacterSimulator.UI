@@ -120,4 +120,51 @@ A calm wanderer who prefers observation before action.
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    public record LoadedCharacterCardInfo(string Name, string Bio, string Physical, string AvatarPath);
+
+    public static LoadedCharacterCardInfo LoadCardDetails(string fileName, string? baseDir = null)
+    {
+        if (string.IsNullOrEmpty(fileName) || fileName.StartsWith("("))
+            return new LoadedCharacterCardInfo("(No Character Selected)", "No character card loaded.", "", "");
+
+        string charDir = ResolveCharactersDirectory(baseDir);
+        string filePath = Path.Combine(charDir, fileName);
+
+        if (!File.Exists(filePath))
+            return new LoadedCharacterCardInfo(Path.GetFileNameWithoutExtension(fileName), "Character card file not found.", "", "");
+
+        string content = File.ReadAllText(filePath);
+        string name = Path.GetFileNameWithoutExtension(fileName);
+        if (!string.IsNullOrEmpty(name))
+        {
+            name = char.ToUpper(name[0]) + name[1..];
+        }
+        string bio = "Loaded from " + fileName;
+        string physical = "";
+
+        var lines = content.Split('\n');
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("name:", StringComparison.OrdinalIgnoreCase))
+            {
+                var val = trimmed.Substring(5).Trim(' ', '"', '\'');
+                if (!string.IsNullOrEmpty(val)) name = val;
+            }
+            else if (trimmed.StartsWith("physical:", StringComparison.OrdinalIgnoreCase))
+            {
+                physical = trimmed.Substring(9).Trim(' ', '"', '\'');
+            }
+            else if (trimmed.StartsWith("active_focus:", StringComparison.OrdinalIgnoreCase))
+            {
+                bio = trimmed.Substring(13).Trim(' ', '"', '\'');
+            }
+        }
+
+        string avatarPath = Path.Combine(charDir, Path.GetFileNameWithoutExtension(fileName) + ".png");
+        if (!File.Exists(avatarPath)) avatarPath = "";
+
+        return new LoadedCharacterCardInfo(name, string.IsNullOrEmpty(physical) ? bio : physical, physical, avatarPath);
+    }
 }
