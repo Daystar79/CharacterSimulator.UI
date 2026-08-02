@@ -34,6 +34,13 @@ public class TurnControlContext
         OnUIUpdated?.Invoke();
     }
 
+    public void RefreshUI()
+    {
+        CurrentSettings = AppConfigService.LoadSettings();
+        OnSettingsChanged?.Invoke(CurrentSettings);
+        OnUIUpdated?.Invoke();
+    }
+
     public void NotifyUIUpdate()
     {
         OnUIUpdated?.Invoke();

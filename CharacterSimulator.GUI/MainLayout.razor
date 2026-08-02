@@ -13,6 +13,8 @@
                 <div class="dropdown-action" @onclick='() => OpenSetupModal("Roleplaying")'>🎭 Roleplaying Configuration...</div>
                 <div class="dropdown-action" @onclick='() => OpenSetupModal("Imaging")'>🎨 Imaging Configuration...</div>
                 <div class="dropdown-divider"></div>
+                <div class="dropdown-action" @onclick="TriggerRefreshUI">🔄 Complete UI Refresh</div>
+                <div class="dropdown-divider"></div>
                 <div class="dropdown-action" @onclick="OpenSavedSessionsModal">📂 Saved Sessions & Exports...</div>
                 <div class="dropdown-divider"></div>
                 <div class="dropdown-action" @onclick="ResetStage">↺ Reset Stage</div>
@@ -57,6 +59,7 @@
         </div>
 
         <div class="toolbar-right">
+            <button class="btn btn-secondary" style="border: 1px solid var(--accent-blue); color: var(--accent-blue);" @onclick="TriggerRefreshUI">🔄 Refresh UI</button>
             <button class="btn btn-success" disabled="@_isPlaying" @onclick="PlaySimulation">▶ Play</button>
 
             <div class="menu-item" style="padding: 0;">
@@ -169,6 +172,13 @@
         ControlContext.OnUIUpdated += OnUIAutoRefresh;
         ControlContext.OnSettingsChanged += OnSettingsUpdated;
         ProfileSvc.OnActiveProfileChanged += OnProfileAutoRefresh;
+    }
+
+    private void TriggerRefreshUI()
+    {
+        ControlContext.RefreshUI();
+        _statusText = "🔄 Complete UI refresh executed. Re-scanned character cards and configuration from disk.";
+        StateHasChanged();
     }
 
     public void Dispose()

@@ -547,6 +547,32 @@
     {
         InvokeAsync(() =>
         {
+            var catalog = CharacterCatalog.ListCardFileNames();
+            _characterDropdownOptions = new List<CustomSelect.DropdownOption>
+            {
+                new("", "(No Character Selected)")
+            };
+            foreach (var card in catalog)
+            {
+                _characterDropdownOptions.Add(new(card, card));
+            }
+
+            if (!string.IsNullOrEmpty(_selectedCharAFile))
+            {
+                SelectCharacterCard("Slot A", _selectedCharAFile);
+            }
+            if (!string.IsNullOrEmpty(_selectedCharBFile))
+            {
+                SelectCharacterCard("Slot B", _selectedCharBFile);
+            }
+
+            _outputLogs.Add(new LogEntryModel
+            {
+                Timestamp = DateTime.Now,
+                Message = "🔄 Complete UI refresh executed. Re-scanned character cards and configuration from disk.",
+                LevelClass = "log-success"
+            });
+
             StateHasChanged();
             _ = JS.InvokeVoidAsync("scrollFeedToBottom", "dialogueFeed");
         });
