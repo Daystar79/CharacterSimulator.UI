@@ -1,11 +1,36 @@
-<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Page not found.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+@using Microsoft.AspNetCore.Components.Web
+
+<ErrorBoundary @ref="_boundary">
+    <ChildContent>
+        <Router AppAssembly="@typeof(App).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <p role="alert">Page not found.</p>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div style="padding: 2rem; font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; min-height: 100vh;">
+            <h1 style="color: #fb7185; margin-bottom: 0.75rem;">Startup error</h1>
+            <p style="color: #94a3b8; margin-bottom: 1rem;">
+                An exception stopped the UI from loading (splash would otherwise hang forever).
+            </p>
+            <pre style="background: #1e293b; padding: 1rem; border-radius: 8px; overflow: auto; white-space: pre-wrap; color: #fbbf24; font-size: 0.85rem;">@ex.ToString()</pre>
+            <button style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;" @onclick="Recover">Try recover</button>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private ErrorBoundary? _boundary;
+
+    private void Recover()
+    {
+        _boundary?.Recover();
+    }
+}

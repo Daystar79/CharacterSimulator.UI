@@ -215,10 +215,12 @@ public class ProcessExecutor : IDisposable
         // Enhance PATH to include common CLI tool locations
         EnhancePath(psi);
         
-        // Set environment variables for better CLI behavior
+        // Set environment variables for better CLI behavior / headless agents
         psi.Environment["PYTHONUNBUFFERED"] = "1";
         psi.Environment["PYTHONIOENCODING"] = "utf-8";
         psi.Environment["TERM"] = "dumb";
+        psi.Environment["NO_COLOR"] = "1";
+        psi.Environment["CI"] = "1"; // many CLIs (incl. Grok Build) stay non-interactive when CI is set
         
         return psi;
     }

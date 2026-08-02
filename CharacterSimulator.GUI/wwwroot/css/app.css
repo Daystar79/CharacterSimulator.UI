@@ -14,8 +14,9 @@
     --accent-amber: #fbbf24;
     --accent-rose: #fb7185;
     --accent-purple: #c084fc;
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'JetBrains Mono', Consolas, monospace;
+    /* System fonts only — no network font load on startup */
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', monospace;
 }
 
 * {
@@ -259,12 +260,12 @@ body, html {
     text-overflow: ellipsis;
 }
 
-/* WORKSPACE GRID */
+/* WORKSPACE GRID — fills remaining space under menu + playback toolbar */
 .workspace-grid {
     flex: 1;
     display: grid;
     grid-template-columns: 320px 1fr 320px;
-    height: calc(100vh - 110px);
+    min-height: 0;
     background: var(--bg-dark);
     overflow: hidden;
 }
@@ -489,11 +490,38 @@ body, html {
     color: var(--accent-blue);
 }
 
+/* Somatic reaction — readable body text, not a tiny muted footnote */
 .somatic-tag {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.55rem;
+    margin: 0.15rem 0 0.45rem 0;
+    padding: 0.4rem 0.55rem;
+    border-radius: 6px;
+    background: rgba(251, 191, 36, 0.08);
+    border-left: 3px solid var(--accent-amber);
+    line-height: 1.45;
+}
+
+.somatic-label {
+    flex: 0 0 auto;
+    font-size: 0.65rem;
+    font-weight: 800;
+    font-style: normal;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-amber);
+    opacity: 0.95;
+}
+
+.somatic-body {
+    flex: 1 1 12rem;
+    font-size: 0.82rem;
     font-style: italic;
-    color: var(--text-muted);
-    font-size: 0.7rem;
-    margin-bottom: 0.25rem;
+    font-weight: 500;
+    color: #e2e8f0; /* near primary — easier to read than muted gray */
+    word-break: break-word;
 }
 
 .dialogue-text {
@@ -501,11 +529,9 @@ body, html {
     word-break: break-word;
 }
 
+/* Bond shift kept out of chat UI (telemetry still on character if needed) */
 .bond-badge {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: var(--accent-amber);
-    margin-top: 0.35rem;
+    display: none;
 }
 
 /* PLAYER PROMPT BAR */
@@ -621,6 +647,62 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
+}
+
+/* Art style radio grid (Generate Portrait modal) */
+.art-style-radio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+}
+
+.art-style-radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: #0f172a;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.art-style-radio:hover {
+    border-color: var(--border-highlight);
+    background: #1e293b;
+}
+
+.art-style-radio.selected {
+    border-color: var(--accent-purple);
+    background: rgba(192, 132, 252, 0.1);
+    box-shadow: 0 0 0 1px rgba(192, 132, 252, 0.25);
+}
+
+.art-style-radio input[type="radio"] {
+    margin-top: 0.2rem;
+    accent-color: var(--accent-purple);
+    flex-shrink: 0;
+}
+
+.art-style-radio-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.art-style-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.art-style-desc {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    line-height: 1.3;
 }
 
 .form-label {

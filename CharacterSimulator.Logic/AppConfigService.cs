@@ -24,9 +24,16 @@ public class AppSettings
     public double Temperature { get; set; } = 0.7;
     public int MaxTokens { get; set; } = 1024;
 
-    // Imaging Engine Settings
+    // Imaging Engine Settings — Pollinations is the product default (free, always on).
+    // Higher-quality backends (SD WebUI, agent image emit) are opt-in via Setup → Imaging.
     public string ImageEngine { get; set; } = "PollinationsAI";
+    /// <summary>Engine-specific model/checkpoint (e.g. Pollinations flux, SD checkpoint title).</summary>
+    public string ImageModelIdentifier { get; set; } = "flux";
     public string ImageResolution { get; set; } = "512x512";
+    /// <summary>
+    /// Shared visual style for portraits and scene art (see ImageArtStyleCatalog ids: anime, photoreal, …).
+    /// </summary>
+    public string ImageArtStyle { get; set; } = Services.ImageArtStyleCatalog.DefaultStyleId;
 }
 
 public static class AppConfigService
@@ -46,12 +53,14 @@ public static class AppConfigService
             {
                 string json = File.ReadAllText(ConfigPath);
                 var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
-                // Normalize genre id if an older display name was stored
-                settings.SelectedGenre = SceneGenreCatalog.GetById(settings.SelectedGenre).Id;
+                NormalizeSettings(settings);
                 return settings;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("[AppConfigService] LoadSettings: " + ex.Message);
+        }
         return new AppSettings();
     }
 
@@ -59,11 +68,64 @@ public static class AppConfigService
     {
         try
         {
+            if (settings == null) return;
             settings.IsConfigured = true;
-            settings.SelectedGenre = SceneGenreCatalog.GetById(settings.SelectedGenre).Id;
+            NormalizeSettings(settings);
             string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(ConfigPath, json);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("[AppConfigService] SaveSettings: " + ex.Message);
+        }
+    }
+
+    /// <summary>Never throw — bad saved values must not kill app startup.</summary>
+    private static void NormalizeSettings(AppSettings settings)
+    {
+        try
+        {
+            settings.SelectedGenre = SceneGenreCatalog.GetById(settings.SelectedGenre).Id;
+        }
+        catch
+        {
+            settings.SelectedGenre = SceneGenreCatalog.DefaultGenreId;
+        }
+
+        // Empty / solo placeholders are not character files
+        if (IsNoneSelection(settings.SelectedCharA))
+            settings.SelectedCharA = "";
+        if (IsNoneSelection(settings.SelectedCharB))
+            settings.SelectedCharB = "";
+
+        if (string.IsNullOrWhiteSpace(settings.ImageEngine))
+            settings.ImageEngine = "PollinationsAI";
+        if (string.IsNullOrWhiteSpace(settings.ImageModelIdentifier))
+            settings.ImageModelIdentifier = "flux";
+        // agent-default only valid for agent engines
+        if (settings.ImageModelIdentifier.Equals("agent-default", StringComparison.OrdinalIgnoreCase) &&
+            !settings.ImageEngine.StartsWith("Agent", StringComparison.OrdinalIgnoreCase))
+        {
+            settings.ImageModelIdentifier = "flux";
+        }
+
+        try
+        {
+            settings.ImageArtStyle = Services.ImageArtStyleCatalog.GetById(settings.ImageArtStyle).Id;
+        }
+        catch
+        {
+            settings.ImageArtStyle = Services.ImageArtStyleCatalog.DefaultStyleId;
+        }
+    }
+
+    private static bool IsNoneSelection(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        if (value.StartsWith('(')) return true;
+        if (value.StartsWith("None", StringComparison.OrdinalIgnoreCase)) return true;
+        if (value.Contains("No Character", StringComparison.OrdinalIgnoreCase)) return true;
+        if (value.Contains("Not Selected", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
     }
 }

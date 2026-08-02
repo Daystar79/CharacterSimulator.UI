@@ -13,27 +13,44 @@ public class Program
     {
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
-        // Register core logic services
-        builder.Services.AddSingleton<ProfileService>(ProfileService.Instance);
-        builder.Services.AddSingleton<TurnControlContext>();
+        // Lazy factory only — never touch SQLite / Instance before first UI paint.
+        builder.Services.AddSingleton<ProfileService>(_ => ProfileService.Instance);
+        builder.Services.AddSingleton<TurnControlContext>(_ =>
+        {
+            try { return new TurnControlContext(); }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[FATAL] TurnControlContext: " + ex);
+                return new TurnControlContext(); // LoadSettings is fail-soft; should not throw
+            }
+        });
+        // Simulation host owns TurnManager run loop + player commands for the GUI.
+        builder.Services.AddSingleton<SimulationHost>(sp =>
+            new SimulationHost(sp.GetRequiredService<TurnControlContext>()));
 
-        // Build root app component
         builder.RootComponents.Add<App>("#app");
 
         var app = builder.Build();
 
-        // Configure native desktop window properties
         app.MainWindow
             .SetTitle("Character Simulator Studio — Blazor Desktop")
             .SetSize(1400, 900)
             .SetUseOsDefaultSize(false)
             .Center();
 
-        AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+        AppDomain.CurrentDomain.UnhandledException += (_, error) =>
         {
             Console.WriteLine($"[FATAL ERROR] {error.ExceptionObject}");
         };
 
-        app.Run();
+        try
+        {
+            app.Run();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[FATAL] app.Run: " + ex);
+            throw;
+        }
     }
 }

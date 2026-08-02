@@ -173,11 +173,18 @@ public static class SceneGenreCatalog
 
     public static SceneGenre GetById(string? id)
     {
-        if (string.IsNullOrWhiteSpace(id))
-            return Genres.First(g => g.Id == DefaultGenreId);
-        return Genres.FirstOrDefault(g => g.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
-            ?? Genres.FirstOrDefault(g => g.DisplayName.Equals(id, StringComparison.OrdinalIgnoreCase))
-            ?? Genres.First(g => g.Id == DefaultGenreId);
+        try
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return Genres.First(g => g.Id == DefaultGenreId);
+            return Genres.FirstOrDefault(g => g.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
+                ?? Genres.FirstOrDefault(g => g.DisplayName.Equals(id, StringComparison.OrdinalIgnoreCase))
+                ?? Genres.First(g => g.Id == DefaultGenreId);
+        }
+        catch
+        {
+            return Genres[0]; // never throw into UI startup
+        }
     }
 
     public static SceneGenre GetByDisplayName(string? displayName) => GetById(displayName);

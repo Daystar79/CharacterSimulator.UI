@@ -1,4 +1,4 @@
-<div class="custom-dropdown-container">
+<div class="custom-dropdown-container" @attributes="AdditionalAttributes">
     <button type="button" class="custom-dropdown-button" @onclick="Toggle">
         <span>@(GetLabel(Value))</span>
         <span style="font-size: 0.7rem; color: var(--text-muted);">▾</span>
@@ -7,11 +7,20 @@
     @if (_isOpen)
     {
         <div class="custom-dropdown-menu">
-            @foreach (var opt in Options)
+            @if (Options == null || Options.Count == 0)
             {
-                <div class="custom-dropdown-item @(opt.Value == Value ? "active" : "")" @onclick="() => Select(opt.Value)">
-                    @opt.Label
+                <div class="custom-dropdown-item" style="color: var(--text-muted); cursor: default;">
+                    (No options)
                 </div>
+            }
+            else
+            {
+                @foreach (var opt in Options)
+                {
+                    <div class="custom-dropdown-item @(opt.Value == Value ? "active" : "")" @onclick="() => Select(opt.Value)">
+                        @opt.Label
+                    </div>
+                }
             }
         </div>
     }
@@ -24,22 +33,26 @@
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public List<DropdownOption> Options { get; set; } = new();
 
-    private bool _isOpen = false;
+    /// <summary>Allows style="..." class="..." etc. without throwing (was killing first render / splash).</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private void Toggle()
-    {
-        _isOpen = !_isOpen;
-    }
+    private bool _isOpen;
+
+    private void Toggle() => _isOpen = !_isOpen;
 
     private void Select(string val)
     {
         _isOpen = false;
         Value = val;
-        ValueChanged.InvokeAsync(val);
+        _ = ValueChanged.InvokeAsync(val);
     }
 
     private string GetLabel(string val)
     {
+        if (Options == null || Options.Count == 0)
+            return string.IsNullOrEmpty(val) ? "(None / Not Selected)" : val;
+
         var opt = Options.FirstOrDefault(o => o.Value == val);
         return opt != null ? opt.Label : (string.IsNullOrEmpty(val) ? "(None / Not Selected)" : val);
     }

@@ -1,7 +1,8 @@
 @inherits LayoutComponentBase
 @inject TurnControlContext ControlContext
-@inject ProfileService ProfileSvc
+@inject SimulationHost SimHost
 @inject IJSRuntime JS
+@* ProfileService resolved lazily after first paint — inject was forcing SQLite open during splash *@
 
 <div class="app-container">
     
@@ -12,6 +13,8 @@
             <div class="menu-dropdown">
                 <div class="dropdown-action" @onclick='() => OpenSetupModal("Roleplaying")'>🎭 Roleplaying Configuration...</div>
                 <div class="dropdown-action" @onclick='() => OpenSetupModal("Imaging")'>🎨 Imaging Configuration...</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-action" @onclick="OpenDeriveCardModal">📜 Derive Card (Canon)...</div>
                 <div class="dropdown-divider"></div>
                 <div class="dropdown-action" @onclick="TriggerRefreshUI">🔄 Complete UI Refresh</div>
                 <div class="dropdown-divider"></div>
@@ -82,16 +85,10 @@
         </div>
     </div>
 
-    <!-- 3. DEDICATED SCENE DESCRIPTION TOOLBAR LINE -->
-    <div class="scene-toolbar-line">
-        <span class="scene-badge">📍 SCENE DESCRIPTION</span>
-        <span class="scene-text">@_activeSceneContext</span>
-    </div>
-
-    <!-- 4. MAIN WORKSPACE CONTENT BODY -->
+    <!-- 3. MAIN WORKSPACE CONTENT BODY -->
     @Body
 
-    <!-- 5. BOTTOM STATUS BAR -->
+    <!-- 4. BOTTOM STATUS BAR -->
     <div class="bottom-status-bar">
         <span>@_statusText</span>
         <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -137,6 +134,11 @@
     <ChangePinModal OnClosed="OnChangePinClosed" />
 }
 
+@if (_showDeriveCardModal)
+{
+    <DeriveCardModal OnClosed="OnDeriveCardClosed" />
+}
+
 @implements IDisposable
 
 @code {
@@ -151,7 +153,6 @@
 
     private string _activeProfileBadge = "Player 1 (Age 25)";
     private string _activeModeBadge = "🎮 Player-Guided";
-    private string _activeSceneContext = "[Contemporary] Quiet city apartment...";
     private string _statusText = "Ready. Click File ➔ Simulation Setup to configure characters.";
     private string _activeLlmInfo = "Agent A: Mock | Agent B: Mock";
     private int _delayMs = 600;
@@ -163,15 +164,49 @@
     private bool _showSetupModal = false;
     private bool _showSavedSessionsModal = false;
     private bool _showChangePinModal = false;
+    private bool _showDeriveCardModal = false;
+
+    private ProfileService? _profileSvc;
+    private bool _profileHooked;
 
     protected override void OnInitialized()
     {
-        UpdateActiveProfileBadge();
-        ApplySettings(ControlContext.CurrentSettings);
+        try
+        {
+            ApplySettings(ControlContext.CurrentSettings);
+        }
+        catch (Exception ex)
+        {
+            _statusText = "Startup warning: " + ex.Message;
+        }
+
         ControlContext.OnStateChanged += OnSimulationStateChanged;
         ControlContext.OnUIUpdated += OnUIAutoRefresh;
         ControlContext.OnSettingsChanged += OnSettingsUpdated;
-        ProfileSvc.OnActiveProfileChanged += OnProfileAutoRefresh;
+        SimHost.OnWaitingChanged += OnHostWaitingChanged;
+        SimHost.OnStatus += OnHostStatus;
+        SimHost.OnModeChanged += OnHostModeChanged;
+        SimHost.OnRequestSetup += OnHostRequestSetup;
+        // Do not touch ProfileService here — that opened SQLite during first layout render
+        // and any exception left the HTML splash stuck forever.
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender || _profileHooked) return;
+        _profileHooked = true;
+        try
+        {
+            _profileSvc = ProfileService.Instance;
+            _profileSvc.OnActiveProfileChanged += OnProfileAutoRefresh;
+            UpdateActiveProfileBadge();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _statusText = "Profile DB delayed: " + ex.Message;
+            StateHasChanged();
+        }
     }
 
     private void TriggerRefreshUI()
@@ -186,7 +221,48 @@
         ControlContext.OnStateChanged -= OnSimulationStateChanged;
         ControlContext.OnUIUpdated -= OnUIAutoRefresh;
         ControlContext.OnSettingsChanged -= OnSettingsUpdated;
-        ProfileSvc.OnActiveProfileChanged -= OnProfileAutoRefresh;
+        SimHost.OnWaitingChanged -= OnHostWaitingChanged;
+        SimHost.OnStatus -= OnHostStatus;
+        SimHost.OnModeChanged -= OnHostModeChanged;
+        SimHost.OnRequestSetup -= OnHostRequestSetup;
+        if (_profileSvc != null)
+            _profileSvc.OnActiveProfileChanged -= OnProfileAutoRefresh;
+    }
+
+    private void OnHostWaitingChanged(bool waiting)
+    {
+        InvokeAsync(() =>
+        {
+            _isWaitingForLlm = waiting;
+            StateHasChanged();
+        });
+    }
+
+    private void OnHostStatus(string text)
+    {
+        InvokeAsync(() =>
+        {
+            _statusText = text;
+            StateHasChanged();
+        });
+    }
+
+    private void OnHostModeChanged(string badge)
+    {
+        InvokeAsync(() =>
+        {
+            _activeModeBadge = badge;
+            StateHasChanged();
+        });
+    }
+
+    private void OnHostRequestSetup()
+    {
+        InvokeAsync(() =>
+        {
+            OpenSetupModal("Roleplaying");
+            StateHasChanged();
+        });
     }
 
     private void OnSettingsUpdated(AppSettings settings)
@@ -198,7 +274,6 @@
     {
         if (settings == null) return;
         _activeModeBadge = settings.RoleplayMode == "AutoPlay" ? "🤖 Auto-Play" : "🎮 Player-Guided";
-        _activeSceneContext = $"[{settings.SelectedGenre}] {settings.ScenePrompt}";
         _activeLlmInfo = $"Roleplay: {settings.RoleplayLlmProvider} ({settings.RoleplayModelIdentifier}) | Image: {settings.ImageEngine}";
         _statusText = $"Active Engine: {settings.RoleplayLlmProvider} ({settings.RoleplayModelIdentifier}) / {settings.ImageEngine}";
         StateHasChanged();
@@ -220,10 +295,15 @@
 
     private void UpdateActiveProfileBadge()
     {
-        var profile = ProfileSvc.ActiveProfile;
-        if (profile != null)
+        try
         {
-            _activeProfileBadge = $"{profile.DisplayName} (Age {profile.CalculateAge()})";
+            var profile = (_profileSvc ?? ProfileService.Instance).ActiveProfile;
+            if (profile != null)
+                _activeProfileBadge = $"{profile.DisplayName} (Age {profile.CalculateAge()})";
+        }
+        catch
+        {
+            _activeProfileBadge = "Profile (pending)";
         }
     }
 
@@ -264,31 +344,33 @@
 
     private void PlaySimulation()
     {
-        ControlContext.Start();
+        SimHost.Play();
     }
 
     private void PauseSimulation()
     {
-        ControlContext.Pause();
+        SimHost.Pause();
     }
 
     private void StepSimulation()
     {
-        ControlContext.Step();
+        SimHost.Step();
     }
 
     private void StopSimulation()
     {
-        ControlContext.Stop();
+        SimHost.Stop();
     }
 
     private void SetAutoPlayMode()
     {
+        SimHost.SetRoleplayMode("AutoPlay");
         _activeModeBadge = "🤖 Auto-Play";
     }
 
     private void SetPlayerGuidedMode()
     {
+        SimHost.SetRoleplayMode("PlayerGuided");
         _activeModeBadge = "🎮 Player-Guided";
     }
 
@@ -331,8 +413,18 @@
         _showSavedSessionsModal = false;
         if (session != null)
         {
-            _activeSceneContext = $"[{session.Genre}] {session.Scene}";
-            _statusText = $"Resumed session '{session.Title}'.";
+            _statusText = $"Resumed session '{session.Title}'. Scene: [{session.Genre}] {session.Scene}";
+            // Push session scene into settings so left-panel Location & Genre pick it up
+            try
+            {
+                var s = ControlContext.CurrentSettings ?? new AppSettings();
+                if (!string.IsNullOrWhiteSpace(session.Genre))
+                    s.SelectedGenre = session.Genre;
+                if (!string.IsNullOrWhiteSpace(session.Scene))
+                    s.ScenePrompt = session.Scene;
+                ControlContext.UpdateSettings(s);
+            }
+            catch { }
             ControlContext.NotifyUIUpdate();
         }
     }
@@ -358,11 +450,36 @@
     private void OnSetupModalClosed(bool launched)
     {
         _showSetupModal = false;
+        if (launched)
+        {
+            // Setup saved SelectedCharA/B + engines — stage primary card and offer to run.
+            var s = ControlContext.CurrentSettings;
+            if (!string.IsNullOrWhiteSpace(s?.SelectedCharA))
+                SimHost.SetStagedCharacter(s.SelectedCharA);
+            _statusText = "Setup saved. Press ▶ Play or send a line in Dialogue to start.";
+            // Auto-start so Launch Simulation is one click.
+            SimHost.Play();
+        }
+    }
+
+    private void OpenDeriveCardModal()
+    {
+        _showDeriveCardModal = true;
+    }
+
+    private void OnDeriveCardClosed(DeriveCardService.DeriveCardResult? result)
+    {
+        _showDeriveCardModal = false;
+        if (result?.Success == true)
+        {
+            _statusText = $"Derived card saved: {result.CharacterName} ({result.CardFileName}). Select it in a character slot.";
+            ControlContext.RefreshUI();
+        }
     }
 
     private void ResetStage()
     {
-        ControlContext.Stop();
-        _statusText = "Stage reset. Select Simulation Setup to begin new session.";
+        SimHost.Reset();
+        _statusText = "Stage reset. Load a character or open Settings → Roleplaying.";
     }
 }

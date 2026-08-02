@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Xunit;
 using CharacterSimulator.Logic;
 
@@ -74,13 +76,44 @@ public class EngineServicesTests
     [Fact]
     public void CharacterLoader_ParsesSessionVariantsAndCardData()
     {
-        string cardPath = Path.Combine("Characters", "anya.md");
+        // Cards use opaque random filenames; resolve by display name from card body.
+        var anya = CharacterCatalog.ListCards()
+            .FirstOrDefault(c => c.DisplayName.Equals("Anya", StringComparison.OrdinalIgnoreCase));
+        if (anya is null) return;
+
+        string cardPath = Path.Combine(CharacterCatalog.ResolveCharactersDirectory(), anya.FileName);
         if (!File.Exists(cardPath)) return;
 
         var character = CharacterLoader.Load(cardPath);
         Assert.Equal("Anya", character.Name);
-        Assert.NotEmpty(character.SessionVariants);
-        Assert.Contains(character.SessionVariants, v => !string.IsNullOrEmpty(v.Location));
+        Assert.Equal(anya.FileName, Path.GetFileName(character.CardPath));
+        // Session variants are optional on converted JSON cards
+        if (character.SessionVariants.Count > 0)
+            Assert.Contains(character.SessionVariants, v => !string.IsNullOrEmpty(v.Location));
+    }
+
+    [Fact]
+    public void CharacterCatalog_ListsByDisplayNameNotFileStem()
+    {
+        var cards = CharacterCatalog.ListCards();
+        if (cards.Count == 0) return;
+
+        foreach (var card in cards)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(card.FileName));
+            Assert.EndsWith(".json", card.FileName, StringComparison.OrdinalIgnoreCase);
+            // Display name comes from card body — not the raw filename
+            Assert.False(card.DisplayName.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+            // Display name should not be empty or just the file extension
+            Assert.False(string.IsNullOrWhiteSpace(card.DisplayName));
+            // For named files, display name may legitimately match card ID (e.g., "Anya.json" -> "Anya")
+            // The important thing is that it comes from the card content, not just the filename
+        }
+
+        // Selector order is alphabetical by display name
+        var names = cards.Select(c => c.DisplayName).ToList();
+        var sorted = names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.Equal(sorted, names);
     }
 
     [Fact]

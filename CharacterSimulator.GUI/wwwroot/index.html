@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Character Simulator Studio</title>
     <base href="/" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- No external CDN fonts: Google Fonts blocked/slow networks leave the Photino splash forever. -->
     <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
@@ -17,7 +15,7 @@
                 <div class="splash-icon">🎭</div>
                 <h1>CHARACTER SIMULATOR STUDIO</h1>
                 <div class="spinner"></div>
-                <p>Initializing C# Logic Engine & Database...</p>
+                <p>Starting desktop host…</p>
             </div>
         </div>
     </div>
@@ -30,10 +28,36 @@
 
     <script src="_framework/blazor.webview.js"></script>
     <script>
-        window.scrollFeedToBottom = (elementId) => {
-            const el = document.getElementById(elementId);
-            if (el) {
+        // Scroll a panel to the bottom after Blazor paints.
+        // Double-rAF covers the frame after DOM mutation; optional second pass for late layout.
+        function _scrollElToBottom(el) {
+            if (!el) return;
+            try {
                 el.scrollTop = el.scrollHeight;
+            } catch (_) { /* ignore */ }
+        }
+
+        window.scrollFeedToBottom = (elementId) => {
+            const id = elementId;
+            const run = () => {
+                const el = document.getElementById(id);
+                _scrollElToBottom(el);
+            };
+            // Immediate + after paint + short settle (images / flex layout)
+            run();
+            requestAnimationFrame(() => {
+                run();
+                requestAnimationFrame(run);
+            });
+            setTimeout(run, 50);
+            setTimeout(run, 150);
+        };
+
+        /** Scroll chat + system log (and optional extra ids) to bottom. */
+        window.scrollPanelsToBottom = (ids) => {
+            const list = Array.isArray(ids) ? ids : (ids ? [ids] : ['dialogueFeed', 'outputLogBox', 'historyLogBox']);
+            for (const id of list) {
+                window.scrollFeedToBottom(id);
             }
         };
     </script>

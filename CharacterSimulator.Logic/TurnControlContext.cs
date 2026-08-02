@@ -34,9 +34,34 @@ public class TurnControlContext
         OnUIUpdated?.Invoke();
     }
 
+    /// <summary>
+    /// Update genre + freeform location without a full UI catalog refresh or log spam.
+    /// Used by the left-panel scene editor (this is the live roleplay scene).
+    /// </summary>
+    public void PatchScene(string? genreId, string? scenePrompt)
+    {
+        CurrentSettings ??= new AppSettings();
+        string genre = SceneGenreCatalog.GetById(genreId).Id;
+        string place = string.IsNullOrWhiteSpace(scenePrompt)
+            ? SceneGenreCatalog.DefaultSceneFor(genre)
+            : scenePrompt.Trim();
+
+        bool changed = !string.Equals(CurrentSettings.SelectedGenre, genre, StringComparison.Ordinal)
+                       || !string.Equals(CurrentSettings.ScenePrompt, place, StringComparison.Ordinal);
+        CurrentSettings.SelectedGenre = genre;
+        CurrentSettings.ScenePrompt = place;
+        if (changed)
+            AppConfigService.SaveSettings(CurrentSettings);
+        // No OnSettingsChanged / OnUIUpdated — Index already holds the live fields;
+        // Setup modal re-reads CurrentSettings when opened.
+    }
+
     public void RefreshUI()
     {
         CurrentSettings = AppConfigService.LoadSettings();
+        // Cheap mtime reconcile so selectors pick up new/edited cards without full re-parse of unchanged files
+        try { CharacterCatalog.ReconcileFromDisk(); }
+        catch { /* index optional */ }
         OnSettingsChanged?.Invoke(CurrentSettings);
         OnUIUpdated?.Invoke();
     }

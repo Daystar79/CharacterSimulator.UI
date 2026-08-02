@@ -1,4 +1,6 @@
 @inject TurnControlContext ControlContext
+@using System.Linq
+@using CharacterSimulator.Logic.Services
 
 <div class="modal-overlay">
     <div class="modal-card" style="width: 580px;">
@@ -41,19 +43,24 @@
                     <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
                             <span>🎭</span>
-                            <span>ROLEPLAY & DIALOGUE LLM ENGINE</span>
+                            <span>ROLEPLAY &amp; DIALOGUE LLM ENGINE</span>
                         </div>
-                        <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="DetectEngines">🔍 Auto-Detect Engines</button>
+                        <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;"
+                                disabled="@_isDetecting" @onclick="DetectRoleplayEngines">
+                            🔍 @(_isDetecting ? "Detecting…" : "Auto-Detect / Refresh")
+                        </button>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label" style="font-size: 0.68rem;">Roleplay LLM Provider:</label>
-                            <CustomSelect @bind-Value="_selectedRoleplayLlmProvider" Options="_llmProviderOptions" />
+                            <CustomSelect Value="@_selectedRoleplayLlmProvider"
+                                          ValueChanged="OnRoleplayProviderChanged"
+                                          Options="_llmProviderOptions" />
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 0.68rem;">Model Tag / Identifier:</label>
-                            <input class="form-control" @bind="_roleplayModelIdentifier" placeholder="e.g. agy-pro, mistral-small, grok-2" />
+                            <label class="form-label" style="font-size: 0.68rem;">Model:</label>
+                            <CustomSelect @bind-Value="_roleplayModelIdentifier" Options="_currentModelOptions" />
                         </div>
                     </div>
 
@@ -71,21 +78,35 @@
             }
             else
             {
-                <p style="font-size: 0.75rem; color: var(--text-secondary);">Configure the AI Image Generator Engine for character portraits and scene artwork.</p>
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">Configure the AI Image Generator for character portraits and scene artwork.</p>
 
                 <!-- IMAGING ENGINE SECTION -->
                 <div style="background: #0f172a; border: 1px solid var(--accent-blue); border-radius: 6px; padding: 0.75rem;">
-                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-blue); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
-                        <span>🎨</span>
-                        <span>CHARACTER & SCENE IMAGE GENERATOR ENGINE</span>
+                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-blue); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span>🎨</span>
+                            <span>CHARACTER &amp; SCENE IMAGE GENERATOR</span>
+                        </div>
+                        <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;"
+                                disabled="@_isDetectingImage" @onclick="DetectImageEngines">
+                            🔍 @(_isDetectingImage ? "Detecting…" : "Auto-Detect / Refresh")
+                        </button>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Image Generator Engine Provider:</label>
-                        <CustomSelect @bind-Value="_selectedImageEngine" Options="_imageEngineOptions" />
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 0.68rem;">Image Engine Provider:</label>
+                            <CustomSelect Value="@_selectedImageEngine"
+                                          ValueChanged="OnImageEngineChanged"
+                                          Options="_imageEngineOptions" />
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 0.68rem;">Image Model / Checkpoint:</label>
+                            <CustomSelect @bind-Value="_selectedImageModel" Options="_imageModelOptions" />
+                        </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
                         <div class="form-group">
                             <label class="form-label">Portrait Resolution:</label>
                             <input class="form-control" @bind="_imageResolution" placeholder="512x512" />
@@ -97,8 +118,9 @@
                     </div>
 
                     <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; margin-top: 0.4rem;">
-                        * Pollinations AI runs 100% free with no keys or setup required.<br/>
-                        * Local Ollama Vision and SD WebUI require local services running on ports 11434 / 7860.
+                        * <b>Default:</b> Pollinations (free). Switch engine for higher quality when available.<br/>
+                        * <b>Refresh</b> re-probes SD WebUI checkpoints and agent image-emit capability.<br/>
+                        * Vision-only models never appear here (consume ≠ generate).
                     </div>
                 </div>
             }
@@ -124,11 +146,6 @@
     [Parameter] public EventCallback<bool> OnClosed { get; set; }
     [Parameter] public string ActiveSection { get; set; } = "Roleplaying";
 
-    private List<CustomSelect.DropdownOption> _characterOptions = new()
-    {
-        new("", "(None / Not Selected)")
-    };
-
     private List<CustomSelect.DropdownOption> _genreOptions = new()
     {
         new("Contemporary", "Contemporary"),
@@ -153,11 +170,19 @@
         new("MockEngine", "🧪 Mock LLM Engine (Offline Test)")
     };
 
+    private List<CustomSelect.DropdownOption> _currentModelOptions = new()
+    {
+        new("agy-pro", "AGY Pro ✓")
+    };
+
     private List<CustomSelect.DropdownOption> _imageEngineOptions = new()
     {
-        new("PollinationsAI", "✨ Pollinations AI (Free Web API - No Setup Required)"),
-        new("OllamaLocal", "🦙 Ollama Vision / Multimodal (Local)"),
-        new("StableDiffusionWebUI", "🎨 Stable Diffusion WebUI (http://localhost:7860)")
+        new(ImageEngineDetector.DefaultEngineId, "✨ Pollinations AI (Default · free web API)")
+    };
+
+    private List<CustomSelect.DropdownOption> _imageModelOptions = new()
+    {
+        new("flux", "Flux (default quality) ✓")
     };
 
     private string _selectedCharA = "";
@@ -167,23 +192,18 @@
     private string _mode = "PlayerGuided";
     private string _selectedRoleplayLlmProvider = "AGY";
     private string _roleplayModelIdentifier = "agy-pro";
-    private string _selectedImageEngine = "PollinationsAI";
+    private string _selectedImageEngine = ImageEngineDetector.DefaultEngineId;
+    private string _selectedImageModel = "flux";
     private string _imageResolution = "512x512";
     private double _temperature = 0.7;
     private int _maxTokens = 1024;
     private string _detectionStatus = "";
     private string _warningMessage = "";
+    private bool _isDetecting;
+    private bool _isDetectingImage;
 
     protected override async Task OnInitializedAsync()
     {
-        var catalog = CharacterCatalog.ListCards();
-        _characterOptions = new List<CustomSelect.DropdownOption> { new("", "(None / Not Selected)") };
-        foreach (var card in catalog)
-        {
-            // Value = opaque filename (card id); Label = name from card body
-            _characterOptions.Add(new(card.FileName, card.DisplayName));
-        }
-
         var saved = AppConfigService.LoadSettings();
         if (saved != null && saved.IsConfigured)
         {
@@ -196,37 +216,231 @@
             _roleplayModelIdentifier = saved.RoleplayModelIdentifier;
             _temperature = saved.Temperature;
             _maxTokens = saved.MaxTokens;
-            _selectedImageEngine = saved.ImageEngine;
+            _selectedImageEngine = string.IsNullOrWhiteSpace(saved.ImageEngine)
+                ? ImageEngineDetector.DefaultEngineId
+                : saved.ImageEngine;
+            _selectedImageModel = string.IsNullOrWhiteSpace(saved.ImageModelIdentifier)
+                ? "flux"
+                : saved.ImageModelIdentifier;
             _imageResolution = saved.ImageResolution;
         }
 
-        await DetectEngines();
+        // Populate both tabs without forcing agent image probes on every open (faster).
+        await DetectRoleplayEngines(force: false);
+        await DetectImageEngines(force: false);
     }
 
-    private async Task DetectEngines()
+    private async Task OnRoleplayProviderChanged(string val)
     {
-        _detectionStatus = "🔍 Scanning local environment for AGY, Grok, Mistral & Ollama engines...";
+        _selectedRoleplayLlmProvider = val;
+        await LoadModelOptionsAsync(forceRefresh: true);
+        StateHasChanged();
+    }
+
+    private async Task OnImageEngineChanged(string val)
+    {
+        _selectedImageEngine = val;
+        await LoadImageModelOptionsAsync(forceRefresh: true);
+        StateHasChanged();
+    }
+
+    private async Task DetectRoleplayEngines() => await DetectRoleplayEngines(force: true);
+
+    private async Task DetectRoleplayEngines(bool force)
+    {
+        _isDetecting = true;
+        _detectionStatus = "🔍 Scanning roleplay LLM providers + models…";
+        _warningMessage = "";
         StateHasChanged();
 
-        var engines = await LlmEngineDetector.DetectAvailableEnginesAsync();
-        _llmProviderOptions.Clear();
-
-        foreach (var eng in engines)
+        try
         {
-            string status = eng.IsAvailable ? "✅ Available" : "❌ Not Found";
-            _llmProviderOptions.Add(new(eng.Id, $"{eng.DisplayName} ({status})"));
+            var engines = await LlmEngineDetector.DetectAvailableEnginesAsync();
+            _llmProviderOptions = engines
+                .Select(e => new CustomSelect.DropdownOption(
+                    e.Id,
+                    $"{e.DisplayName} ({(e.IsAvailable ? "✅" : "❌")})"))
+                .ToList();
+
+            if (_llmProviderOptions.Count == 0)
+            {
+                _llmProviderOptions = new List<CustomSelect.DropdownOption>
+                {
+                    new("MockEngine", "🧪 Mock LLM Engine (Offline)")
+                };
+            }
+
+            // Keep saved provider if listed; else first available non-mock; else mock
+            bool providerOk = _llmProviderOptions.Any(o => o.Value == _selectedRoleplayLlmProvider);
+            if (!providerOk)
+            {
+                var available = engines.FirstOrDefault(e => e.IsAvailable && e.Id != "MockEngine");
+                _selectedRoleplayLlmProvider = available?.Id ?? "MockEngine";
+            }
+
+            LlmModelFetcher.ClearCache(_selectedRoleplayLlmProvider);
+            await LoadModelOptionsAsync(forceRefresh: true);
+
+            _detectionStatus =
+                $"✅ Roleplay: {_selectedRoleplayLlmProvider} · model: {_roleplayModelIdentifier} · {_currentModelOptions.Count} model option(s)";
+        }
+        catch (Exception ex)
+        {
+            _warningMessage = "Roleplay detect failed: " + ex.Message;
+            // Hard fallback so dropdown is never empty
+            _currentModelOptions = LlmModelFetcher.GetFallbackModels(_selectedRoleplayLlmProvider)
+                .Select(m => new CustomSelect.DropdownOption(m.Id, m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                .ToList();
+            if (_currentModelOptions.Count > 0 &&
+                !_currentModelOptions.Any(o => o.Value == _roleplayModelIdentifier))
+            {
+                _roleplayModelIdentifier = _currentModelOptions[0].Value;
+            }
+        }
+        finally
+        {
+            _isDetecting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DetectImageEngines() => await DetectImageEngines(force: true);
+
+    private async Task DetectImageEngines(bool force)
+    {
+        _isDetectingImage = true;
+        _detectionStatus = force
+            ? "🔍 Probing image engines (Pollinations + SD + agent emit)…"
+            : "🔍 Loading image engines…";
+        _warningMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            // force: re-run agent emit probes; soft open uses cache
+            var imageEngines = await ImageEngineDetector.DetectAvailableImageEnginesAsync(
+                probeAgents: true,
+                forceReprobe: force);
+
+            _imageEngineOptions = imageEngines
+                .Select(e => new CustomSelect.DropdownOption(e.Id, e.DisplayName))
+                .ToList();
+
+            if (_imageEngineOptions.Count == 0)
+            {
+                _imageEngineOptions = new List<CustomSelect.DropdownOption>
+                {
+                    new(ImageEngineDetector.DefaultEngineId, "✨ Pollinations AI (Default)")
+                };
+            }
+
+            _selectedImageEngine = ImageEngineDetector.CoalesceToAvailable(_selectedImageEngine, imageEngines);
+
+            ImageModelFetcher.ClearCache(_selectedImageEngine);
+            await LoadImageModelOptionsAsync(forceRefresh: true);
+
+            int agents = imageEngines.Count(e => e.Id.StartsWith("Agent", StringComparison.OrdinalIgnoreCase));
+            string imgLabel = _selectedImageEngine == ImageEngineDetector.DefaultEngineId
+                ? "Pollinations (default)"
+                : _selectedImageEngine;
+            _detectionStatus =
+                $"✅ Imaging: {imgLabel} · model: {_selectedImageModel} · {_imageModelOptions.Count} option(s)" +
+                (agents > 0 ? $" · {agents} agent image backend(s)" : "");
+        }
+        catch (Exception ex)
+        {
+            _warningMessage = "Image detect failed: " + ex.Message;
+            _imageEngineOptions = new List<CustomSelect.DropdownOption>
+            {
+                new(ImageEngineDetector.DefaultEngineId, "✨ Pollinations AI (Default)")
+            };
+            _selectedImageEngine = ImageEngineDetector.DefaultEngineId;
+            _imageModelOptions = ImageModelFetcher.GetPollinationsModels()
+                .Select(m => new CustomSelect.DropdownOption(m.Id, m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                .ToList();
+            _selectedImageModel = "flux";
+        }
+        finally
+        {
+            _isDetectingImage = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadModelOptionsAsync(bool forceRefresh = false)
+    {
+        try
+        {
+            var models = await LlmModelFetcher.GetModelsForProviderAsync(
+                _selectedRoleplayLlmProvider, forceRefresh);
+
+            if (models.Count == 0)
+                models = LlmModelFetcher.GetFallbackModels(_selectedRoleplayLlmProvider);
+
+            _currentModelOptions = models
+                .Select(m => new CustomSelect.DropdownOption(
+                    m.Id,
+                    m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                .ToList();
+
+            if (_currentModelOptions.Count == 0)
+            {
+                _currentModelOptions = new List<CustomSelect.DropdownOption>
+                {
+                    new("default", "Default model")
+                };
+            }
+
+            if (!_currentModelOptions.Any(o => o.Value == _roleplayModelIdentifier))
+            {
+                var def = models.FirstOrDefault(m => m.IsDefault) ?? models.FirstOrDefault();
+                _roleplayModelIdentifier = def?.Id ?? _currentModelOptions[0].Value;
+            }
+        }
+        catch
+        {
+            _currentModelOptions = LlmModelFetcher.GetFallbackModels(_selectedRoleplayLlmProvider)
+                .Select(m => new CustomSelect.DropdownOption(m.Id, m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                .ToList();
+            if (_currentModelOptions.Count > 0)
+                _roleplayModelIdentifier = _currentModelOptions[0].Value;
         }
 
-        var availableRoleplay = engines.Find(e => e.IsAvailable && e.Id != "MockEngine");
-        if (availableRoleplay != null)
+        StateHasChanged();
+    }
+
+    private async Task LoadImageModelOptionsAsync(bool forceRefresh = false)
+    {
+        try
         {
-            _selectedRoleplayLlmProvider = availableRoleplay.Id;
-            _detectionStatus = $"✅ Auto-detected active Roleplay LLM engine: {availableRoleplay.DisplayName}";
+            var models = await ImageModelFetcher.GetModelsForEngineAsync(
+                _selectedImageEngine, forceRefresh);
+
+            _imageModelOptions = models
+                .Select(m => new CustomSelect.DropdownOption(
+                    m.Id,
+                    m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                .ToList();
+
+            if (_imageModelOptions.Count == 0)
+            {
+                _imageModelOptions = ImageModelFetcher.GetPollinationsModels()
+                    .Select(m => new CustomSelect.DropdownOption(m.Id, m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                    .ToList();
+            }
+
+            if (!_imageModelOptions.Any(o => o.Value == _selectedImageModel))
+            {
+                var def = models.FirstOrDefault(m => m.IsDefault) ?? models.FirstOrDefault();
+                _selectedImageModel = def?.Id ?? _imageModelOptions[0].Value;
+            }
         }
-        else
+        catch
         {
-            _selectedRoleplayLlmProvider = "MockEngine";
-            _detectionStatus = "ℹ️ Offline mode: Mock LLM Engine active for roleplay.";
+            _imageModelOptions = ImageModelFetcher.GetPollinationsModels()
+                .Select(m => new CustomSelect.DropdownOption(m.Id, m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                .ToList();
+            _selectedImageModel = "flux";
         }
 
         StateHasChanged();
@@ -252,6 +466,7 @@
             Temperature = _temperature,
             MaxTokens = _maxTokens,
             ImageEngine = _selectedImageEngine,
+            ImageModelIdentifier = _selectedImageModel,
             ImageResolution = _imageResolution
         };
         ControlContext.UpdateSettings(settings);

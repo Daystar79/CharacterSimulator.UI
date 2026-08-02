@@ -31,6 +31,8 @@ public class ProfileService : IDisposable
     private readonly ProfileRepository _profileRepo;
     private readonly SessionRepository _sessionRepo;
     private readonly CharacterProgressRepository _progressRepo;
+    private readonly CharacterCatalogRepository _catalogRepo;
+    private readonly CharacterPortraitRepository _portraitRepo;
 
     public event Action<UserProfile?>? OnActiveProfileChanged;
 
@@ -44,6 +46,12 @@ public class ProfileService : IDisposable
         _profileRepo = new ProfileRepository(_conn);
         _sessionRepo = new SessionRepository(_conn);
         _progressRepo = new CharacterProgressRepository(_conn);
+        _catalogRepo = new CharacterCatalogRepository(_conn);
+        _portraitRepo = new CharacterPortraitRepository(_conn);
+
+        // Bind indexes only — full catalog reconcile is deferred so first UI paint is not blocked.
+        CharacterCatalog.BindIndex(_catalogRepo);
+        CharacterPortraitService.Bind(_portraitRepo, _catalogRepo);
 
         EnsureDefaultProfileExists();
     }
@@ -124,4 +132,9 @@ public class ProfileService : IDisposable
     public ProfileRepository Profiles => _profileRepo;
     public SessionRepository Sessions => _sessionRepo;
     public CharacterProgressRepository Progress => _progressRepo;
+    public CharacterCatalogRepository Catalog => _catalogRepo;
+    public CharacterPortraitRepository Portraits => _portraitRepo;
+
+    /// <summary>Rescan Characters/ into the SQLite catalog index (Refresh UI / post-derive).</summary>
+    public int ReconcileCharacterCatalog() => CharacterCatalog.ReconcileFromDisk();
 }

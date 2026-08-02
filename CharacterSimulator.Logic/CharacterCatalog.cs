@@ -4,15 +4,20 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
+using CharacterSimulator.Logic.Data.Db;
 
 namespace CharacterSimulator.Logic;
 
 /// <summary>
 /// Discovers loadable character card files under Characters/.
-/// Card files use opaque random IDs as filenames; display names come from card content.
+/// Card files use opaque random IDs as filenames; display names come from card content
+/// (preferably via the SQLite character_catalog index when bound).
 /// </summary>
 public static class CharacterCatalog
 {
+    private static readonly object IndexLock = new();
+    private static CharacterCatalogRepository? _index;
+
     private static readonly HashSet<string> ExcludedNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "HOW_TO_CARD.md",
@@ -23,7 +28,57 @@ public static class CharacterCatalog
     /// <summary>
     /// A discovered card: stable file identity + human-facing name from the card body.
     /// </summary>
-    public record CharacterCardRef(string FileName, string DisplayName, string CardId);
+    public record CharacterCardRef(
+        string FileName,
+        string DisplayName,
+        string CardId,
+        string Description = "",
+        string AvatarPath = "");
+
+    /// <summary>
+    /// Wire the SQLite catalog index (called from ProfileService on startup).
+    /// When bound, ListCards prefers the index over full-file scans.
+    /// </summary>
+    public static void BindIndex(CharacterCatalogRepository? repository)
+    {
+        lock (IndexLock)
+        {
+            _index = repository;
+        }
+    }
+
+    public static bool HasIndex
+    {
+        get { lock (IndexLock) return _index != null; }
+    }
+
+    /// <summary>
+    /// Reconcile SQLite index with Characters/ on disk (mtime/size fingerprint).
+    /// Safe no-op when no index is bound.
+    /// </summary>
+    public static int ReconcileFromDisk(string? baseDir = null)
+    {
+        CharacterCatalogRepository? repo;
+        lock (IndexLock) repo = _index;
+        if (repo == null) return 0;
+
+        string charDir = ResolveCharactersDirectory(baseDir);
+        return repo.ReconcileFromDisk(charDir);
+    }
+
+    /// <summary>
+    /// Upsert one card into the SQLite index after create/derive/save.
+    /// </summary>
+    public static CharacterCatalogRecord? UpsertIndexFromFile(
+        string cardPath,
+        string? sourceLabel = null,
+        bool? isDerived = null)
+    {
+        CharacterCatalogRepository? repo;
+        lock (IndexLock) repo = _index;
+        if (repo == null) return null;
+        return repo.UpsertFromFile(cardPath, sourceLabel, isDerived);
+    }
 
     public static string ResolveCharactersDirectory(string? baseDir = null)
     {
@@ -160,9 +215,62 @@ public static class CharacterCatalog
     }
 
     /// <summary>
-    /// Lists cards sorted by display name (from card body). Values are filenames (opaque ids).
+    /// Lists cards sorted by display name. Prefers SQLite index when bound;
+    /// falls back to file scan (and backfills the index when possible).
     /// </summary>
     public static List<CharacterCardRef> ListCards(string? baseDir = null)
+    {
+        CharacterCatalogRepository? repo;
+        lock (IndexLock) repo = _index;
+
+        if (repo != null)
+        {
+            // Fast path: serve SQLite index as-is (no disk walk). Use ListCardsFresh after imports.
+            var rows = repo.ListAll();
+            if (rows.Count > 0)
+            {
+                return rows.Select(r => new CharacterCardRef(
+                    r.FileName,
+                    r.DisplayName,
+                    r.CardId,
+                    r.Description,
+                    r.AvatarPath)).ToList();
+            }
+
+            // Empty index only — one reconcile to seed
+            try
+            {
+                repo.ReconcileFromDisk(ResolveCharactersDirectory(baseDir));
+                rows = repo.ListAll();
+                if (rows.Count > 0)
+                {
+                    return rows.Select(r => new CharacterCardRef(
+                        r.FileName,
+                        r.DisplayName,
+                        r.CardId,
+                        r.Description,
+                        r.AvatarPath)).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[CharacterCatalog] Reconcile: " + ex.Message);
+            }
+        }
+
+        return ListCardsFromFiles(baseDir);
+    }
+
+    /// <summary>
+    /// Force a disk reconcile then return index/file listing (used by UI Refresh).
+    /// </summary>
+    public static List<CharacterCardRef> ListCardsFresh(string? baseDir = null)
+    {
+        ReconcileFromDisk(baseDir);
+        return ListCards(baseDir);
+    }
+
+    private static List<CharacterCardRef> ListCardsFromFiles(string? baseDir = null)
     {
         string charDir = ResolveCharactersDirectory(baseDir);
         if (!Directory.Exists(charDir)) return new List<CharacterCardRef>();
@@ -173,7 +281,7 @@ public static class CharacterCatalog
             {
                 string fileName = Path.GetFileName(path);
                 string cardId = GetCardId(fileName);
-                string displayName = GetCharacterDisplayName(fileName, baseDir);
+                string displayName = ReadDisplayNameFromFile(path, fileName);
                 return new CharacterCardRef(fileName, displayName, cardId);
             })
             .OrderBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)
@@ -206,16 +314,32 @@ public static class CharacterCatalog
         if (string.IsNullOrEmpty(fileName) || fileName.StartsWith("("))
             return fileName;
 
+        // Prefer SQLite index
+        CharacterCatalogRepository? repo;
+        lock (IndexLock) repo = _index;
+        if (repo != null)
+        {
+            var row = repo.GetByFileName(fileName) ?? repo.GetByCardId(GetCardId(fileName));
+            if (row != null && !string.IsNullOrWhiteSpace(row.DisplayName))
+                return row.DisplayName;
+        }
+
         string charDir = ResolveCharactersDirectory(baseDir);
         string filePath = Path.Combine(charDir, fileName);
 
         if (!File.Exists(filePath))
             return "Unknown Character";
 
+        return ReadDisplayNameFromFile(filePath, fileName);
+    }
+
+    private static string ReadDisplayNameFromFile(string filePath, string fileName)
+    {
         try
         {
             string content = File.ReadAllText(filePath);
-            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+                filePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             {
                 using var doc = JsonDocument.Parse(content);
                 var root = doc.RootElement;
@@ -234,7 +358,6 @@ public static class CharacterCatalog
             }
             else
             {
-                // Legacy markdown/YAML cards
                 foreach (var line in content.Split('\n'))
                 {
                     var trimmed = line.Trim();
@@ -249,7 +372,6 @@ public static class CharacterCatalog
         }
         catch { }
 
-        // Opaque id — never surface the random filename as a "name"
         string id = GetCardId(fileName);
         if (id.Length > 8)
             return $"Unnamed ({id[..8]})";
@@ -387,7 +509,19 @@ public static class CharacterCatalog
             skills.Add("Empathy Tuning");
         }
 
-        string avatarPath = ResolveAvatarPath(charDir, GetCardId(fileName), name);
+        string cardId = GetCardId(fileName);
+        // Prefer SQLite portrait BLOB → data URI; else file on disk
+        string avatarPath = "";
+        try
+        {
+            string? dbUri = Services.CharacterPortraitService.TryGetStoredDataUri(cardId);
+            if (!string.IsNullOrEmpty(dbUri))
+                avatarPath = dbUri;
+        }
+        catch { }
+
+        if (string.IsNullOrEmpty(avatarPath))
+            avatarPath = ResolveAvatarPath(charDir, cardId, name);
 
         return new LoadedCharacterCardInfo(name, age, description, physical, cognitiveGift, goals, likes, skills, avatarPath);
     }

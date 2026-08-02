@@ -28,9 +28,8 @@ Midlayer (book writing) only needs the cognitive engine and is out of scope here
 
 ### Preferred implementer
 
-- **Primary for this roadmap: Gemini Pro** (large context — read Logic + GUI + fixme + this file in one shot).  
 - Keep prompts seam-scoped (host/DB only; do not reimplement cognitive engine).  
-- Mistral/others: fine for narrow follow-ups; Gemini for the multi-feature SQLite + profile slice.
+- Prefer large-context implementers for multi-feature host/DB slices; smaller models for narrow follow-ups.
 
 ---
 

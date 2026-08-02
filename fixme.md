@@ -1,6 +1,6 @@
 # FIXME — Known bugs & residual gaps
 
-Tracked leftovers from the deterministic Logic port (Gemini) and surgical hardening pass (Mistral).  
+Tracked leftovers from the deterministic Logic port and surgical hardening pass.  
 Do not treat these as product features; they are correctness / safety / hygiene fixes.
 
 ---

@@ -90,6 +90,24 @@ public class CliLlmClient : ILLMClient, IDisposable
         string prompt = PromptBuilder.BuildFullPrompt(character, input, sceneContext, goalContext);
         return await ExecuteWithRetryAsync(prompt, ct).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Free-form completion without RP prompt assembly (card builders, tools).
+    /// </summary>
+    public Task<string> CompleteRawAsync(string prompt, CancellationToken ct = default)
+    {
+        if (_executor == null)
+        {
+            return Task.FromResult(
+                $"[CLI ERROR: {Name}] Executable not found: '{ExecutablePath}'. " +
+                "Check that it is installed and visible on PATH (GUI apps may miss ~/.local/bin).");
+        }
+
+        if (string.IsNullOrWhiteSpace(prompt))
+            return Task.FromResult("[CLI ERROR] Empty prompt.");
+
+        return ExecuteWithRetryAsync(prompt, ct);
+    }
     
     /// <summary>
     /// Executes the CLI with retry logic

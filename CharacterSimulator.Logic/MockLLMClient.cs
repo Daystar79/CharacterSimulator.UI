@@ -169,4 +169,84 @@ public class MockLLMClient : ILLMClient
         // Mock client is synchronous and fast, so just return completed task
         return Task.FromResult(SendPrompt(character, input, sceneContext, goalContext));
     }
+
+    public Task<string> CompleteRawAsync(string prompt, CancellationToken ct = default)
+    {
+        // Offline derive-card scaffold: extract a target name if present, emit valid pack JSON.
+        string name = "Derived Character";
+        if (!string.IsNullOrWhiteSpace(prompt))
+        {
+            // Prefer "TARGET CHARACTER NAME: X" from DeriveCardService prompts
+            var lines = prompt.Split('\n');
+            foreach (var line in lines)
+            {
+                var t = line.Trim();
+                if (t.StartsWith("TARGET CHARACTER NAME:", StringComparison.OrdinalIgnoreCase))
+                {
+                    name = t["TARGET CHARACTER NAME:".Length..].Trim();
+                    if (!string.IsNullOrWhiteSpace(name)) break;
+                }
+            }
+        }
+
+        string json = $$"""
+            {
+              "accuracy_summary": {
+                "sources": ["mock offline derive (no network)"],
+                "kept": ["name", "playable skeleton"],
+                "compressed": [],
+                "left_blank": ["canon detail — replace via re-derive with real LLM + source"]
+              },
+              "card": {
+                "name": "{{name.Replace("\"", "'")}}",
+                "call_name": "{{name.Replace("\"", "'")}}",
+                "age": 25,
+                "canon_adult": true,
+                "physical": "Appearance not locked — mock derive without canon fetch.",
+                "voice_archetype": "B",
+                "cultural_bias": "unknown",
+                "active_focus": "Realm I — Form",
+                "latent_anchors": ["Realm VI — Compassion", "Realm VIII — Ambition"],
+                "cognitive_bias": "Guard — holds surface composure when uncertain",
+                "cognitive_gift": "Presence — steadies when trust is clear",
+                "default_somatic_alignment": "Even breath; hands still",
+                "somatic_zones": [
+                  "Face/Eyes: steady gaze",
+                  "Chest/Breath: controlled rhythm",
+                  "Hands/Arms: quiet",
+                  "Spine/Posture: upright"
+                ],
+                "transformation_weights": {
+                  "active_focus": 70,
+                  "latent_anchors": { "VI": 15, "VIII": 15 },
+                  "bias_strength": 55,
+                  "somatic_flexibility": 40
+                },
+                "depth_of_knowledge": {
+                  "general": "unknown",
+                  "esoteric": "unknown",
+                  "personal": "unknown"
+                },
+                "voice": {
+                  "baseline": "Clear, measured",
+                  "syntactical_engine": "Short direct sentences",
+                  "conversational_stance": "collaborative",
+                  "verbal_defense": "deflects with brevity",
+                  "generative_stance": "opens slightly when safe",
+                  "hard_bans": ["system jargon", "therapy-speak labels"],
+                  "signature_tics": ["brief pause before answering"],
+                  "relational_verbal_shifts": {}
+                },
+                "history_anchors": [
+                  "unknown — source not available in mock mode"
+                ],
+                "scene_seeds": [
+                  "Quiet room; first meeting; neutral object between them"
+                ]
+              }
+            }
+            """;
+
+        return Task.FromResult(json);
+    }
 }

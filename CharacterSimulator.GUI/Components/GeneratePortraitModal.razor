@@ -1,43 +1,85 @@
+@using CharacterSimulator.Logic
 @using CharacterSimulator.Logic.Services
-@inject CharacterSimulator.Logic.TurnControlContext ControlContext
+@inject TurnControlContext ControlContext
 
 <div class="modal-overlay">
-    <div class="modal-card" style="width: 520px;">
+    <div class="modal-card" style="width: 560px;">
         <div class="modal-header">
             <div class="modal-title">🎨 AI CHARACTER PORTRAIT GENERATOR</div>
             <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
         </div>
         <div class="modal-body">
-            <p style="font-size: 0.75rem; color: var(--text-secondary);">Generate a custom AI portrait for character slot <b>@SlotName</b> using Pollinations AI (Free Web API - No Setup Required).</p>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">
+                Portrait for <b>@SlotName</b> · card <code>@_cardId</code>.
+                Uses the engine selected below (synced from Setup → Imaging).
+            </p>
 
-            <div class="form-group">
-                <label class="form-label">Image Generation Engine / Model:</label>
-                <CustomSelect @bind-Value="_selectedEngine" Options="_engineOptions" />
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label class="form-label" style="font-size: 0.68rem;">Image Engine:</label>
+                    <CustomSelect Value="@_selectedEngine" ValueChanged="OnEngineChanged" Options="_engineOptions" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label class="form-label" style="font-size: 0.68rem;">Model / Checkpoint:</label>
+                    <CustomSelect Value="@_selectedModel" ValueChanged="OnModelChanged" Options="_modelOptions" />
+                </div>
+            </div>
+
+            <div style="font-size: 0.68rem; color: var(--accent-blue); margin-bottom: 0.5rem;">
+                Active: <b>@_selectedEngine</b> / <b>@_selectedModel</b> / style <b>@_selectedArtStyle</b>
+                @if (_settingsSynced)
+                {
+                    <span style="color: var(--accent-green);"> · from Setup settings</span>
+                }
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.65rem;">
+                <label class="form-label">Art style (shared with Scene artwork):</label>
+                <div class="art-style-radio-grid" role="radiogroup" aria-label="Art style">
+                    @foreach (var style in ImageArtStyleCatalog.All)
+                    {
+                        <label class="art-style-radio @(_selectedArtStyle == style.Id ? "selected" : "")" title="@style.Description">
+                            <input type="radio"
+                                   name="portrait-art-style"
+                                   value="@style.Id"
+                                   checked="@(_selectedArtStyle == style.Id)"
+                                   @onchange="() => OnArtStyleChanged(style.Id)" />
+                            <span class="art-style-radio-text">
+                                <span class="art-style-name">@style.DisplayName</span>
+                                <span class="art-style-desc">@style.Description</span>
+                            </span>
+                        </label>
+                    }
+                </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Appearance Prompt / Description:</label>
-                <textarea class="form-control" rows="3" @bind="_prompt" placeholder="e.g. Cyberpunk security officer female, dark hair, cyan visor, high detail digital art..."></textarea>
+                <textarea class="form-control" rows="3" @bind="_prompt" placeholder="e.g. silver hair, ice-blue eyes, portrait..."></textarea>
             </div>
 
             @if (_isGenerating)
             {
                 <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 1rem; text-align: center; margin-top: 0.5rem;">
-                    <div style="font-size: 0.9rem; font-weight: 700; color: var(--accent-purple);">✨ Generating AI Portrait...</div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem;">Contacting selected image generator neural renderer. Please wait...</div>
+                    <div style="font-size: 0.9rem; font-weight: 700; color: var(--accent-purple);">✨ Generating via @_selectedEngine…</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem;">
+                        Model: @_selectedModel · Style: @ImageArtStyleCatalog.GetById(_selectedArtStyle).DisplayName
+                    </div>
                 </div>
             }
             else if (!string.IsNullOrEmpty(_generatedImagePath))
             {
                 <div style="background: #0f172a; border: 1px solid var(--accent-green); border-radius: 6px; padding: 0.75rem; text-align: center; margin-top: 0.5rem;">
                     <img src="@_generatedImagePath" style="max-width: 200px; height: auto; border-radius: 8px; border: 1px solid var(--border-highlight);" alt="Generated Portrait" />
-                    <div style="font-size: 0.72rem; color: var(--accent-green); font-weight: 600; margin-top: 0.4rem;">✅ AI Portrait Generated Successfully!</div>
+                    <div style="font-size: 0.72rem; color: var(--accent-green); font-weight: 600; margin-top: 0.4rem;">
+                        ✅ Ready · engine used: @_engineUsed
+                    </div>
                 </div>
             }
 
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
-                <div style="color: var(--accent-rose); font-size: 0.75rem; font-weight: 600; margin-top: 0.4rem;">@_errorMessage</div>
+                <div style="color: var(--accent-rose); font-size: 0.75rem; font-weight: 600; margin-top: 0.4rem; white-space: pre-wrap;">@_errorMessage</div>
             }
         </div>
         <div class="modal-footer">
@@ -45,7 +87,7 @@
             <button class="btn btn-primary" disabled="@_isGenerating" @onclick="Generate">✨ Generate AI Art</button>
             @if (!string.IsNullOrEmpty(_generatedImagePath))
             {
-                <button class="btn btn-success" @onclick="Apply">Apply to Stage ➔</button>
+                <button class="btn btn-success" @onclick="Apply">Apply &amp; Save ➔</button>
             }
         </div>
     </div>
@@ -55,36 +97,164 @@
     [Parameter] public string SlotName { get; set; } = "Slot A";
     [Parameter] public EventCallback<string> OnPortraitGenerated { get; set; }
     [Parameter] public string CharacterAppearance { get; set; } = "";
+    [Parameter] public string CardFileName { get; set; } = "";
 
-    private List<CustomSelect.DropdownOption> _engineOptions = new()
-    {
-        new("PollinationsAI", "✨ Pollinations AI (Free Web API - No Setup Required)"),
-        new("OllamaLocal", "🦙 Ollama / Multimodal Vision LLM (Local)"),
-        new("StableDiffusionWebUI", "🎨 Stable Diffusion WebUI (http://localhost:7860)")
-    };
+    private List<CustomSelect.DropdownOption> _engineOptions = new();
+    private List<CustomSelect.DropdownOption> _modelOptions = new();
 
-    private string _selectedEngine = "PollinationsAI";
+    private string _selectedEngine = ImageEngineDetector.DefaultEngineId;
+    private string _selectedModel = "flux";
+    private string _selectedArtStyle = ImageArtStyleCatalog.DefaultStyleId;
     private string _prompt = "";
-    private bool _isGenerating = false;
+    private bool _isGenerating;
     private string _generatedImagePath = "";
+    private byte[]? _generatedBytes;
+    private string _generatedMime = "image/jpeg";
     private string _errorMessage = "";
+    private string _cardId = "";
+    private string _engineUsed = "";
+    private bool _settingsSynced;
 
-    protected override void OnParametersSet()
+    protected override async Task OnInitializedAsync()
     {
-        // Set prompt from character appearance, with fallback
+        _cardId = CharacterCatalog.GetCardId(CardFileName);
+        if (string.IsNullOrEmpty(_cardId))
+            _cardId = SlotName.ToLowerInvariant().Replace(" ", "_");
+
         if (!string.IsNullOrEmpty(CharacterAppearance))
-        {
             _prompt = CharacterAppearance;
-        }
         else if (string.IsNullOrEmpty(_prompt))
-        {
             _prompt = "Character portrait, high quality detailed artwork";
+
+        // Component is created fresh each time Index opens the modal (@if) —
+        // always pull latest Setup → Imaging choice here.
+        await SyncFromSettingsAndLoadAsync();
+    }
+
+    private async Task SyncFromSettingsAndLoadAsync()
+    {
+        // Prefer live context; fall back to disk so we never miss a just-saved Setup choice
+        var settings = ControlContext?.CurrentSettings ?? AppConfigService.LoadSettings();
+        if (settings != null)
+        {
+            if (!string.IsNullOrWhiteSpace(settings.ImageEngine))
+                _selectedEngine = settings.ImageEngine.Trim();
+            if (!string.IsNullOrWhiteSpace(settings.ImageModelIdentifier))
+                _selectedModel = settings.ImageModelIdentifier.Trim();
+            if (!string.IsNullOrWhiteSpace(settings.ImageArtStyle))
+                _selectedArtStyle = ImageArtStyleCatalog.GetById(settings.ImageArtStyle).Id;
+            _settingsSynced = true;
         }
 
-        if (ControlContext?.CurrentSettings != null && !string.IsNullOrEmpty(ControlContext.CurrentSettings.ImageEngine))
+        await LoadEngineOptionsAsync();
+        await LoadModelOptionsAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadEngineOptionsAsync()
+    {
+        List<DetectedImageEngine> engines;
+        try
         {
-            _selectedEngine = ControlContext.CurrentSettings.ImageEngine;
+            engines = await ImageEngineDetector.DetectAvailableImageEnginesAsync(
+                probeAgents: true, forceReprobe: false);
         }
+        catch
+        {
+            engines = new List<DetectedImageEngine>
+            {
+                new(ImageEngineDetector.DefaultEngineId, "✨ Pollinations AI (Default)", true, "", ImageGeneratorEngine.PollinationsAI)
+            };
+        }
+
+        _engineOptions = engines
+            .Select(e => new CustomSelect.DropdownOption(e.Id, e.DisplayName))
+            .ToList();
+
+        // If Setup selected an engine that isn't in the detected list yet, keep it selectable
+        // (do NOT force Coalesce back to Pollinations — that was wiping the user's choice).
+        if (!_engineOptions.Any(o => o.Value.Equals(_selectedEngine, StringComparison.OrdinalIgnoreCase)))
+        {
+            _engineOptions.Insert(0, new(
+                _selectedEngine,
+                $"{_selectedEngine} (from Setup)"));
+        }
+
+        if (_engineOptions.Count == 0)
+        {
+            _engineOptions.Add(new(ImageEngineDetector.DefaultEngineId, "✨ Pollinations AI (Default)"));
+            _selectedEngine = ImageEngineDetector.DefaultEngineId;
+        }
+    }
+
+    private async Task LoadModelOptionsAsync()
+    {
+        try
+        {
+            var models = await ImageModelFetcher.GetModelsForEngineAsync(_selectedEngine, forceRefresh: false);
+            _modelOptions = models
+                .Select(m => new CustomSelect.DropdownOption(m.Id, m.DisplayName + (m.IsDefault ? " ✓" : "")))
+                .ToList();
+        }
+        catch
+        {
+            _modelOptions = ImageModelFetcher.GetPollinationsModels()
+                .Select(m => new CustomSelect.DropdownOption(m.Id, m.DisplayName))
+                .ToList();
+        }
+
+        if (_modelOptions.Count == 0)
+            _modelOptions.Add(new("flux", "flux"));
+
+        if (!_modelOptions.Any(o => o.Value.Equals(_selectedModel, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Keep setup model as option if missing
+            _modelOptions.Insert(0, new(_selectedModel, $"{_selectedModel} (from Setup)"));
+        }
+    }
+
+    private async Task OnEngineChanged(string val)
+    {
+        _selectedEngine = val;
+        PersistImagingChoice();
+        await LoadModelOptionsAsync();
+
+        // When switching engines, pick that engine's default model if current isn't listed
+        if (!_modelOptions.Any(o => o.Value.Equals(_selectedModel, StringComparison.OrdinalIgnoreCase)))
+        {
+            _selectedModel = _modelOptions.FirstOrDefault()?.Value ?? _selectedModel;
+            PersistImagingChoice();
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnModelChanged(string val)
+    {
+        _selectedModel = val;
+        PersistImagingChoice();
+        StateHasChanged();
+    }
+
+    private void OnArtStyleChanged(string styleId)
+    {
+        _selectedArtStyle = ImageArtStyleCatalog.GetById(styleId).Id;
+        PersistImagingChoice();
+        StateHasChanged();
+    }
+
+    private void PersistImagingChoice()
+    {
+        try
+        {
+            var settings = ControlContext?.CurrentSettings ?? AppConfigService.LoadSettings() ?? new AppSettings();
+            settings.ImageEngine = _selectedEngine;
+            settings.ImageModelIdentifier = _selectedModel;
+            settings.ImageArtStyle = _selectedArtStyle;
+            ControlContext?.UpdateSettings(settings);
+            _settingsSynced = true;
+        }
+        catch { }
     }
 
     private async Task Generate()
@@ -95,25 +265,84 @@
             return;
         }
 
+        // Final re-read of selection (user may have just changed dropdowns)
+        string engineId = _selectedEngine;
+        string modelId = _selectedModel;
+        string artStyleId = _selectedArtStyle;
+        var engineEnum = ImageEngineDetector.ParseEngineId(engineId);
+        string styleName = ImageArtStyleCatalog.GetById(artStyleId).DisplayName;
+
         _isGenerating = true;
         _errorMessage = "";
+        _generatedBytes = null;
+        _generatedImagePath = "";
+        _engineUsed = $"{engineId} / {modelId} / {styleName}";
         StateHasChanged();
 
         try
         {
-            string slug = SlotName.ToLower().Replace(" ", "_");
-            var selectedEnum = _selectedEngine switch
-            {
-                "OllamaLocal" => ImageGeneratorEngine.OllamaLocal,
-                "StableDiffusionWebUI" => ImageGeneratorEngine.StableDiffusionWebUI,
-                _ => ImageGeneratorEngine.PollinationsAI
-            };
+            // allowPollinationsFallback: false when user picked a non-default engine
+            bool allowFallback = engineEnum == ImageGeneratorEngine.PollinationsAI;
 
-            _generatedImagePath = await AiImageGeneratorService.GeneratePortraitAsync(_prompt, slug, selectedEnum);
+            var result = await AiImageGeneratorService.GeneratePortraitDetailedAsync(
+                _prompt,
+                _cardId,
+                engineEnum,
+                default,
+                modelId,
+                allowPollinationsFallback: allowFallback,
+                artStyleId: artStyleId);
+
+            // Detect silent wrong-engine use
+            bool looksLikeOnlyUrl = result.ImageBytes == null &&
+                                    !string.IsNullOrEmpty(result.DisplayUri) &&
+                                    result.DisplayUri.Contains("pollinations", StringComparison.OrdinalIgnoreCase);
+
+            if (engineEnum != ImageGeneratorEngine.PollinationsAI && looksLikeOnlyUrl)
+            {
+                _errorMessage =
+                    $"Engine '{engineId}' did not return image bytes. " +
+                    "Output looked like a Pollinations URL / empty agent response.\n" +
+                    "Check that the provider is running and passed image-emit detection in Setup → Imaging.";
+                return;
+            }
+
+            if (result.ImageBytes == null || result.ImageBytes.Length == 0)
+            {
+                if (!string.IsNullOrEmpty(result.DisplayUri) &&
+                    (result.DisplayUri.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+                     result.DisplayUri.StartsWith("http", StringComparison.OrdinalIgnoreCase)))
+                {
+                    _generatedImagePath = result.DisplayUri;
+                    _engineUsed = $"{engineId} / {modelId} / {styleName}";
+                }
+                else
+                {
+                    _errorMessage = $"No image returned from '{engineId}' (model '{modelId}').";
+                    return;
+                }
+            }
+            else
+            {
+                _generatedBytes = result.ImageBytes;
+                _generatedMime = result.MimeType;
+                _generatedImagePath = result.DisplayUri;
+                _engineUsed = $"{engineId} / {modelId} / {styleName}";
+
+                if (CharacterPortraitService.HasStore)
+                {
+                    _generatedImagePath = CharacterPortraitService.SavePortrait(
+                        _cardId, _generatedBytes, _generatedMime, _prompt, engineId);
+                }
+            }
+
+            // Push to stage immediately so the character panel updates without a second click
+            if (!string.IsNullOrEmpty(_generatedImagePath))
+                await OnPortraitGenerated.InvokeAsync(_generatedImagePath);
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Generation failed: {ex.Message}";
+            _errorMessage = $"Generation failed ({engineId}): {ex.Message}";
         }
         finally
         {
@@ -122,13 +351,34 @@
         }
     }
 
-    private void Apply()
+    private async Task Apply()
     {
-        OnPortraitGenerated.InvokeAsync(_generatedImagePath);
+        if (_generatedBytes is { Length: > 0 } && CharacterPortraitService.HasStore &&
+            !string.IsNullOrEmpty(_cardId))
+        {
+            try
+            {
+                _generatedImagePath = CharacterPortraitService.SavePortrait(
+                    _cardId, _generatedBytes, _generatedMime, _prompt, _selectedEngine);
+            }
+            catch { }
+        }
+        else if (!string.IsNullOrEmpty(_generatedImagePath) && CharacterPortraitService.HasStore &&
+                 !string.IsNullOrEmpty(_cardId))
+        {
+            var saved = CharacterPortraitService.SaveFromDataUriOrUrl(
+                _cardId, _generatedImagePath, _prompt, _selectedEngine);
+            if (!string.IsNullOrEmpty(saved))
+                _generatedImagePath = saved;
+        }
+
+        if (!string.IsNullOrEmpty(_generatedImagePath))
+            await OnPortraitGenerated.InvokeAsync(_generatedImagePath);
     }
 
-    private void Close()
+    private async Task Close()
     {
-        OnPortraitGenerated.InvokeAsync("");
+        // Keep stage portrait if we already applied on generate; empty close only dismisses modal
+        await OnPortraitGenerated.InvokeAsync("");
     }
 }

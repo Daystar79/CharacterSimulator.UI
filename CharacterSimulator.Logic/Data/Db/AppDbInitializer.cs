@@ -28,10 +28,10 @@ public static class AppDbInitializer
         var conn = new SqliteConnection(builder.ConnectionString);
         conn.Open();
 
-        // Enable Foreign Keys & Write-Ahead Logging for speed + reliability
+        // Foreign keys, WAL, and a busy timeout so a leftover lock doesn't hang the splash forever
         using (var cmd = conn.CreateCommand())
         {
-            cmd.CommandText = "PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;";
+            cmd.CommandText = "PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;";
             cmd.ExecuteNonQuery();
         }
 
@@ -123,6 +123,37 @@ public static class AppDbInitializer
                 FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
             );
 
+            -- UI phone book for opaque card files (full identity remains on disk JSON).
+            CREATE TABLE IF NOT EXISTS character_catalog (
+                card_id TEXT PRIMARY KEY,
+                file_name TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                call_name TEXT,
+                age INTEGER,
+                canon_adult INTEGER NOT NULL DEFAULT 1,
+                description TEXT,
+                physical_short TEXT,
+                avatar_path TEXT,
+                source_label TEXT,
+                is_derived INTEGER NOT NULL DEFAULT 0,
+                file_mtime_utc TEXT,
+                content_fingerprint TEXT,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_character_catalog_name
+                ON character_catalog(display_name COLLATE NOCASE);
+
+            -- Generated / assigned character portraits (BLOB lookup by card_id).
+            CREATE TABLE IF NOT EXISTS character_portraits (
+                card_id TEXT PRIMARY KEY,
+                mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+                image_blob BLOB NOT NULL,
+                prompt TEXT,
+                engine TEXT,
+                updated_at TEXT NOT NULL
+            );
+
             INSERT OR IGNORE INTO schema_info (version, updated_at) VALUES (1, datetime('now'));
         ";
         cmd.ExecuteNonQuery();
@@ -132,6 +163,42 @@ public static class AppDbInitializer
             using var alterCmd = conn.CreateCommand();
             alterCmd.CommandText = "ALTER TABLE profiles ADD COLUMN recovery_code TEXT;";
             alterCmd.ExecuteNonQuery();
+        }
+        catch { }
+
+        // Forward-compatible: tables added after initial ship.
+        try
+        {
+            using var catalogCmd = conn.CreateCommand();
+            catalogCmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS character_catalog (
+                    card_id TEXT PRIMARY KEY,
+                    file_name TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    call_name TEXT,
+                    age INTEGER,
+                    canon_adult INTEGER NOT NULL DEFAULT 1,
+                    description TEXT,
+                    physical_short TEXT,
+                    avatar_path TEXT,
+                    source_label TEXT,
+                    is_derived INTEGER NOT NULL DEFAULT 0,
+                    file_mtime_utc TEXT,
+                    content_fingerprint TEXT,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_character_catalog_name
+                    ON character_catalog(display_name COLLATE NOCASE);
+
+                CREATE TABLE IF NOT EXISTS character_portraits (
+                    card_id TEXT PRIMARY KEY,
+                    mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+                    image_blob BLOB NOT NULL,
+                    prompt TEXT,
+                    engine TEXT,
+                    updated_at TEXT NOT NULL
+                );";
+            catalogCmd.ExecuteNonQuery();
         }
         catch { }
     }

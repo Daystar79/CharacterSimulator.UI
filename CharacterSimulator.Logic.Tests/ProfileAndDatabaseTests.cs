@@ -83,7 +83,8 @@ public class ProfileAndDatabaseTests
             var profile = pRepo.CreateProfile("Tester", 1998, 6, 12);
 
             var sRepo = new SessionRepository(conn);
-            var session = sRepo.CreateSession(profile.Id, "Test Session", "Neon Alley", "Cyberpunk", "AutoPlay", new() { "serena.md", "kira.md" });
+            // character_slug stores opaque card ids (filename stems), not display names
+            var session = sRepo.CreateSession(profile.Id, "Test Session", "Neon Alley", "Cyberpunk", "AutoPlay", new() { "a1b2c3d4e5f60718", "f0e1d2c3b4a59687" });
 
             sRepo.AddTurn(new DbSessionTurn
             {

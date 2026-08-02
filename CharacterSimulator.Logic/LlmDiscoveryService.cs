@@ -39,10 +39,12 @@ public static class LlmDiscoveryService
         },
         new LlmProviderInfo
         {
+            // Grok Build TUI: headless single-turn or it opens an interactive session.
             Name = "Grok CLI",
             ExecutablePath = "grok",
-            ArgumentsTemplate = "-p {0}",
-            Aliases = { "grok", "grok cli", "xai" }
+            ArgumentsTemplate =
+                "--always-approve --output-format plain --permission-mode bypassPermissions --disable-web-search --no-subagents --no-alt-screen -p {0}",
+            Aliases = { "grok", "grok cli", "xai", "grok build", "grok tui" }
         },
         new LlmProviderInfo
         {

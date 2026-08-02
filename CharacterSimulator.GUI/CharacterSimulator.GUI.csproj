@@ -19,6 +19,11 @@
     <None Update="Assets\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Ensure character cards ship with the GUI host (not only via Logic output) -->
+    <None Include="..\Characters\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Characters\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
     <Content Update="wwwroot\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
