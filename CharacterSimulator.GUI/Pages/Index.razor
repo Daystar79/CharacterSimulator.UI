@@ -326,7 +326,18 @@
         StateHasChanged();
         try
         {
-            _sceneImagePath = await CharacterSimulator.Logic.Services.AiImageGeneratorService.GeneratePortraitAsync("Contemporary quiet city apartment at midnight during a rainstorm, warm interior lights, neon city view", "scene_location");
+            var engineEnum = ControlContext.CurrentSettings?.ImageEngine switch
+            {
+                "OllamaLocal" => CharacterSimulator.Logic.Services.ImageGeneratorEngine.OllamaLocal,
+                "StableDiffusionWebUI" => CharacterSimulator.Logic.Services.ImageGeneratorEngine.StableDiffusionWebUI,
+                _ => CharacterSimulator.Logic.Services.ImageGeneratorEngine.PollinationsAI
+            };
+
+            string scenePrompt = string.IsNullOrEmpty(ControlContext.CurrentSettings?.ScenePrompt)
+                ? "Contemporary quiet city apartment at midnight during a rainstorm, warm interior lights, neon city view"
+                : ControlContext.CurrentSettings.ScenePrompt;
+
+            _sceneImagePath = await CharacterSimulator.Logic.Services.AiImageGeneratorService.GeneratePortraitAsync(scenePrompt, "scene_location", engineEnum);
         }
         catch { }
         finally
