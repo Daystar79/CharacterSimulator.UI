@@ -7,47 +7,56 @@
             <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
         </div>
         <div class="modal-body">
-            <p style="font-size: 0.75rem; color: var(--text-secondary);">Configure the character pair, scene context, genre, and interaction mode.</p>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group">
-                    <label class="form-label">Character A (First Speaker):</label>
-                    <CustomSelect @bind-Value="_selectedCharA" Options="_characterOptions" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Character B (Second Speaker):</label>
-                    <CustomSelect @bind-Value="_selectedCharB" Options="_characterOptions" />
-                </div>
+            <!-- TAB HEADER FOR SETTINGS -->
+            <div class="panel-tabs-header" style="margin-bottom: 0.75rem;">
+                <button class="panel-tab-btn @(ActiveSection == "Roleplaying" ? "active" : "")" @onclick='() => ActiveSection = "Roleplaying"'>
+                    🎭 ROLEPLAYING SETTINGS
+                </button>
+                <button class="panel-tab-btn @(ActiveSection == "Imaging" ? "active" : "")" @onclick='() => ActiveSection = "Imaging"'>
+                    🎨 IMAGING SETTINGS
+                </button>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Simulation Genre:</label>
-                <CustomSelect @bind-Value="_selectedGenre" Options="_genreOptions" />
-            </div>
+            @if (ActiveSection == "Roleplaying")
+            {
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">Configure the character pair, scene context, genre, execution mode, and Roleplay LLM engine.</p>
 
-            <div class="form-group">
-                <label class="form-label">Initial Scene Context / Location:</label>
-                <textarea class="form-control" rows="3" @bind="_sceneContext" placeholder="Describe the scene setting..."></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Execution Mode:</label>
-                <CustomSelect @bind-Value="_mode" Options="_modeOptions" />
-            </div>
-
-            <!-- AI ENGINE & IMAGE GENERATOR CONFIGURATION SEGMENT -->
-            <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 0.75rem; margin-top: 0.75rem;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
-                        <span>🤖</span>
-                        <span>AI ROLEPLAY & IMAGE GENERATION ENGINES</span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                        <label class="form-label">Character A (First Speaker):</label>
+                        <CustomSelect @bind-Value="_selectedCharA" Options="_characterOptions" />
                     </div>
-                    <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="DetectEngines">🔍 Auto-Detect Engines</button>
+                    <div class="form-group">
+                        <label class="form-label">Character B (Second Speaker):</label>
+                        <CustomSelect @bind-Value="_selectedCharB" Options="_characterOptions" />
+                    </div>
                 </div>
 
-                <!-- SECTION 1: ROLEPLAY & DIALOGUE LLM ENGINE -->
-                <div style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.3rem;">🎭 1. ROLEPLAY & DIALOGUE LLM ENGINE</div>
+                <div class="form-group">
+                    <label class="form-label">Simulation Genre:</label>
+                    <CustomSelect @bind-Value="_selectedGenre" Options="_genreOptions" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Initial Scene Context / Location:</label>
+                    <textarea class="form-control" rows="2" @bind="_sceneContext" placeholder="Describe the scene setting..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Execution Mode:</label>
+                    <CustomSelect @bind-Value="_mode" Options="_modeOptions" />
+                </div>
+
+                <!-- ROLEPLAY LLM ENGINE SECTION -->
+                <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 0.75rem; margin-top: 0.5rem;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span>🎭</span>
+                            <span>ROLEPLAY & DIALOGUE LLM ENGINE</span>
+                        </div>
+                        <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="DetectEngines">🔍 Auto-Detect Engines</button>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label" style="font-size: 0.68rem;">Roleplay LLM Provider:</label>
@@ -58,39 +67,57 @@
                             <input class="form-control" @bind="_roleplayModelIdentifier" placeholder="e.g. agy-pro, mistral-small, grok-2" />
                         </div>
                     </div>
-                </div>
 
-                <!-- SECTION 2: CHARACTER & SCENE IMAGE GENERATOR ENGINE -->
-                <div>
-                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.3rem;">🎨 2. CHARACTER & SCENE IMAGE GENERATOR ENGINE</div>
-                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 0.68rem;">Image Generator Engine:</label>
-                            <CustomSelect @bind-Value="_selectedImageEngine" Options="_imageEngineOptions" />
+                            <label class="form-label">Temperature: @_temperature.ToString("F1")</label>
+                            <input type="range" class="form-control" min="0.1" max="1.5" step="0.1" @bind="_temperature" style="padding: 0.2rem;" />
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" style="font-size: 0.68rem;">Resolution / Aspect Ratio:</label>
-                            <input class="form-control" @bind="_imageResolution" placeholder="512x512, 1024x576" />
+                            <label class="form-label">Max Response Tokens:</label>
+                            <input type="number" class="form-control" min="128" max="4096" step="128" @bind="_maxTokens" />
                         </div>
                     </div>
                 </div>
+            }
+            else
+            {
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">Configure the AI Image Generator Engine for character portraits and scene artwork.</p>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Temperature: @_temperature.ToString("F1")</label>
-                        <input type="range" class="form-control" min="0.1" max="1.5" step="0.1" @bind="_temperature" style="padding: 0.2rem;" />
+                <!-- IMAGING ENGINE SECTION -->
+                <div style="background: #0f172a; border: 1px solid var(--accent-blue); border-radius: 6px; padding: 0.75rem;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-blue); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+                        <span>🎨</span>
+                        <span>CHARACTER & SCENE IMAGE GENERATOR ENGINE</span>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Max Response Tokens:</label>
-                        <input type="number" class="form-control" min="128" max="4096" step="128" @bind="_maxTokens" />
+
+                    <div class="form-group">
+                        <label class="form-label">Image Generator Engine Provider:</label>
+                        <CustomSelect @bind-Value="_selectedImageEngine" Options="_imageEngineOptions" />
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div class="form-group">
+                            <label class="form-label">Portrait Resolution:</label>
+                            <input class="form-control" @bind="_imageResolution" placeholder="512x512" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Scene Resolution:</label>
+                            <input class="form-control" value="1024x576" readonly />
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; margin-top: 0.4rem;">
+                        * Pollinations AI runs 100% free with no keys required.<br/>
+                        * Local Ollama Vision and SD WebUI require local services running on ports 11434 / 7860.
                     </div>
                 </div>
+            }
 
-                @if (!string.IsNullOrEmpty(_detectionStatus))
-                {
-                    <div style="font-size: 0.68rem; color: var(--accent-green); font-weight: 600; margin-top: 0.4rem;">@_detectionStatus</div>
-                }
-            </div>
+            @if (!string.IsNullOrEmpty(_detectionStatus))
+            {
+                <div style="font-size: 0.68rem; color: var(--accent-green); font-weight: 600; margin-top: 0.4rem;">@_detectionStatus</div>
+            }
 
             @if (!string.IsNullOrEmpty(_warningMessage))
             {
@@ -106,6 +133,7 @@
 
 @code {
     [Parameter] public EventCallback<bool> OnClosed { get; set; }
+    [Parameter] public string ActiveSection { get; set; } = "Roleplaying";
 
     private List<CustomSelect.DropdownOption> _characterOptions = new()
     {

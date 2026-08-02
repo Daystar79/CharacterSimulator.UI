@@ -8,9 +8,10 @@
     <!-- 1. TOP MENU BAR -->
     <div class="top-menu-bar">
         <div class="menu-item">
-            <span>📁 File</span>
+            <span>⚙️ Settings</span>
             <div class="menu-dropdown">
-                <div class="dropdown-action" @onclick="OpenSetupModal">⚙️ Simulation Setup...</div>
+                <div class="dropdown-action" @onclick='() => OpenSetupModal("Roleplaying")'>🎭 Roleplaying Configuration...</div>
+                <div class="dropdown-action" @onclick='() => OpenSetupModal("Imaging")'>🎨 Imaging Configuration...</div>
                 <div class="dropdown-divider"></div>
                 <div class="dropdown-action" @onclick="OpenSavedSessionsModal">📂 Saved Sessions & Exports...</div>
                 <div class="dropdown-divider"></div>
@@ -120,7 +121,7 @@
 
 @if (_showSetupModal)
 {
-    <SimulationSetupModal OnClosed="OnSetupModalClosed" />
+    <SimulationSetupModal ActiveSection="@_setupActiveSection" OnClosed="OnSetupModalClosed" />
 }
 
 @if (_showSavedSessionsModal)
@@ -318,8 +319,11 @@
         _showChangePinModal = false;
     }
 
-    private void OpenSetupModal()
+    private string _setupActiveSection = "Roleplaying";
+
+    private void OpenSetupModal(string section = "Roleplaying")
     {
+        _setupActiveSection = section;
         _showSetupModal = true;
     }
 
