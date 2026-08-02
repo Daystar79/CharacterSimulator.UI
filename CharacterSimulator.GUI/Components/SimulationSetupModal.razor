@@ -37,9 +37,12 @@
 
             <!-- AI LLM ENGINE CONFIGURATION SEGMENT -->
             <div style="background: #0f172a; border: 1px solid var(--accent-purple); border-radius: 6px; padding: 0.75rem; margin-top: 0.75rem;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
-                    <span>🤖</span>
-                    <span>AI LLM PROVIDER & ENGINE CONFIGURATION</span>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🤖</span>
+                        <span>AI LLM PROVIDER & ENGINE CONFIGURATION</span>
+                    </div>
+                    <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="DetectEngines">🔍 Auto-Detect Engines</button>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
@@ -63,7 +66,11 @@
                         <input type="number" class="form-control" min="128" max="4096" step="128" @bind="_maxTokens" />
                     </div>
                 </div>
-                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.3rem;">* Local CLI wrappers & local API servers keep application execution 100% free with no paid tiers.</div>
+
+                @if (!string.IsNullOrEmpty(_detectionStatus))
+                {
+                    <div style="font-size: 0.68rem; color: var(--accent-green); font-weight: 600; margin-top: 0.3rem;">@_detectionStatus</div>
+                }
             </div>
 
             @if (!string.IsNullOrEmpty(_warningMessage))
@@ -117,9 +124,10 @@
     private string _modelIdentifier = "mistral-small";
     private double _temperature = 0.7;
     private int _maxTokens = 1024;
+    private string _detectionStatus = "";
     private string _warningMessage = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         var catalog = CharacterCatalog.ListCardFileNames();
         _characterOptions = new List<CustomSelect.DropdownOption> { new("", "(None / Not Selected)") };
@@ -127,6 +135,37 @@
         {
             _characterOptions.Add(new(c, c));
         }
+
+        await DetectEngines();
+    }
+
+    private async Task DetectEngines()
+    {
+        _detectionStatus = "🔍 Scanning local system for LLM engines...";
+        StateHasChanged();
+
+        var engines = await LlmEngineDetector.DetectAvailableEnginesAsync();
+        _llmProviderOptions.Clear();
+
+        foreach (var eng in engines)
+        {
+            string status = eng.IsAvailable ? "✅ Available" : "❌ Not Found";
+            _llmProviderOptions.Add(new(eng.Id, $"{eng.DisplayName} ({status})"));
+        }
+
+        var available = engines.Find(e => e.IsAvailable && e.Id != "MockEngine");
+        if (available != null)
+        {
+            _selectedLlmProvider = available.Id;
+            _detectionStatus = $"✅ Auto-detected active engine: {available.DisplayName}";
+        }
+        else
+        {
+            _selectedLlmProvider = "MockEngine";
+            _detectionStatus = "ℹ️ Offline mode: Mock LLM Engine active.";
+        }
+
+        StateHasChanged();
     }
 
     private void StartSimulation()

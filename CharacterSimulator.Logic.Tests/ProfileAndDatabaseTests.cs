@@ -111,4 +111,12 @@ public class ProfileAndDatabaseTests
             }
         }
     }
+
+    [Fact]
+    public async Task LlmEngineDetector_DetectAvailableEngines_ReturnsDetectedProviders()
+    {
+        var engines = await LlmEngineDetector.DetectAvailableEnginesAsync();
+        Assert.NotEmpty(engines);
+        Assert.Contains(engines, e => e.Id == "MockEngine" && e.IsAvailable);
+    }
 }

@@ -10,6 +10,11 @@
             <p style="font-size: 0.75rem; color: var(--text-secondary);">Generate a custom AI portrait for character slot <b>@SlotName</b> using Pollinations AI (Free API).</p>
 
             <div class="form-group">
+                <label class="form-label">Image Generation Engine / Model:</label>
+                <CustomSelect @bind-Value="_selectedEngine" Options="_engineOptions" />
+            </div>
+
+            <div class="form-group">
                 <label class="form-label">Appearance Prompt / Description:</label>
                 <textarea class="form-control" rows="3" @bind="_prompt" placeholder="e.g. Cyberpunk security officer female, dark hair, cyan visor, high detail digital art..."></textarea>
             </div>
@@ -49,6 +54,14 @@
     [Parameter] public string SlotName { get; set; } = "Slot A";
     [Parameter] public EventCallback<string> OnPortraitGenerated { get; set; }
 
+    private List<CustomSelect.DropdownOption> _engineOptions = new()
+    {
+        new("PollinationsAI", "✨ Pollinations AI (Free Neural Renderer)"),
+        new("OllamaLocal", "🦙 Ollama / Multimodal Vision LLM (Local)"),
+        new("StableDiffusionWebUI", "🎨 Stable Diffusion WebUI (http://localhost:7860)")
+    };
+
+    private string _selectedEngine = "PollinationsAI";
     private string _prompt = "Cyberpunk security officer female with glowing cyan visor, high quality detailed digital art";
     private bool _isGenerating = false;
     private string _generatedImagePath = "";
@@ -69,7 +82,14 @@
         try
         {
             string slug = SlotName.ToLower().Replace(" ", "_");
-            _generatedImagePath = await AiImageGeneratorService.GeneratePortraitAsync(_prompt, slug);
+            var selectedEnum = _selectedEngine switch
+            {
+                "OllamaLocal" => ImageGeneratorEngine.OllamaLocal,
+                "StableDiffusionWebUI" => ImageGeneratorEngine.StableDiffusionWebUI,
+                _ => ImageGeneratorEngine.PollinationsAI
+            };
+
+            _generatedImagePath = await AiImageGeneratorService.GeneratePortraitAsync(_prompt, slug, selectedEnum);
         }
         catch (Exception ex)
         {
