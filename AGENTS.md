@@ -3,12 +3,11 @@
 ## Repository Instructions & Configuration Notes
 
 ### Git Authentication
-* **SSH Key Storage:** SSH keys for repository operations and remote pushes are stored in the `./keys` directory.
-* **Git Push Command:** When performing automated or CLI git push operations, specify the SSH key from the `./keys` folder:
+* **SSH Key Storage:** SSH keys for repository operations and remote pushes are stored in `/mnt/Books/Keys/id_ed25519_github` (or `./keys` directory).
+* **Git Push Command:** When performing automated or CLI git push operations, specify the SSH key:
   ```bash
-  GIT_SSH_COMMAND="ssh -i ./keys/id_rsa -o StrictHostKeyChecking=accept-new" git push origin main
+  GIT_SSH_COMMAND="ssh -i /mnt/Books/Keys/id_ed25519_github -o StrictHostKeyChecking=accept-new" git push origin main
   ```
-  *(or `keys/id_ed25519` / target key name).*
 
 ---
 
