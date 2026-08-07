@@ -121,25 +121,25 @@ public static class ImageArtStyleCatalog
             : scenePlaceOrContext.Trim();
 
         // Cap length for URL-based generators (Pollinations).
-        place = Truncate(place, 300);
+        place = Truncate(place, 260);
 
         var sb = new StringBuilder();
         sb.Append(style.SceneCue);
+        sb.Append(". Location and setting: ");
+        sb.Append(place);
 
         string appearance = FirstNonEmpty(characterPhysical, characterDescription);
         if (!string.IsNullOrWhiteSpace(appearance))
         {
-            appearance = Truncate(appearance!, 220);
+            appearance = Truncate(appearance!, 180);
             string who = string.IsNullOrWhiteSpace(characterName) ? "a character" : characterName.Trim();
             sb.Append(". Featuring ");
             sb.Append(who);
-            sb.Append(" standing in scene (full or mid figure, ");
+            sb.Append(" in scene (");
             sb.Append(appearance);
             sb.Append(")");
         }
 
-        sb.Append(". Location and setting: ");
-        sb.Append(place);
         sb.Append(". Wide shot, environmental storytelling, no text, no watermark, no UI.");
 
         return sb.ToString();
