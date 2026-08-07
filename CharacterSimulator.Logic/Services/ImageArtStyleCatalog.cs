@@ -86,7 +86,8 @@ public static class ImageArtStyleCatalog
 
     /// <summary>
     /// Merge subject prompt with the selected art style for a character portrait.
-    /// Avoids double-stacking if the prompt already names a strong style.
+    /// Prepends the style cue to the front so AI image generators (Pollinations, SD, Flux)
+    /// prioritize the art style directive.
     /// </summary>
     public static string ApplyPortraitStyle(string? prompt, string? artStyleId)
     {
@@ -95,10 +96,10 @@ public static class ImageArtStyleCatalog
         if (string.IsNullOrEmpty(p))
             return style.PortraitCue;
 
-        if (PromptAlreadySpecifiesStyle(p))
+        if (p.StartsWith(style.PortraitCue, StringComparison.OrdinalIgnoreCase))
             return p;
 
-        return $"{p}, {style.PortraitCue}";
+        return $"{style.PortraitCue}. Subject details: {p}";
     }
 
     /// <summary>
@@ -120,10 +121,9 @@ public static class ImageArtStyleCatalog
         place = Truncate(place, 400);
 
         var sb = new StringBuilder();
-        sb.Append("Wide establishing shot of the location, environmental storytelling, ");
-        sb.Append("no text, no watermark, no UI. ");
         sb.Append(style.SceneCue);
-        sb.Append(". Location and atmosphere: ");
+        sb.Append(". Wide establishing shot of location, environmental storytelling, ");
+        sb.Append("no text, no watermark, no UI. Location and atmosphere: ");
         sb.Append(place);
 
         string appearance = FirstNonEmpty(characterPhysical, characterDescription);
@@ -133,28 +133,11 @@ public static class ImageArtStyleCatalog
             string who = string.IsNullOrWhiteSpace(characterName) ? "a character" : characterName.Trim();
             sb.Append(". Include ");
             sb.Append(who);
-            sb.Append(" in the scene (full or mid figure, not a headshot portrait), matching this appearance: ");
+            sb.Append(" in scene (full or mid figure, matching style), appearance: ");
             sb.Append(appearance);
         }
 
         return sb.ToString();
-    }
-
-    private static bool PromptAlreadySpecifiesStyle(string p)
-    {
-        // User already locked a look — don't force another preset on top.
-        string[] markers =
-        {
-            "anime", "photoreal", "photo-real", "realistic photo", "semi-realistic",
-            "watercolor", "pixel art", "oil painting", "comic book", "3d render",
-            "in the style of"
-        };
-        foreach (var m in markers)
-        {
-            if (p.Contains(m, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
     }
 
     private static string? FirstNonEmpty(params string?[] parts)

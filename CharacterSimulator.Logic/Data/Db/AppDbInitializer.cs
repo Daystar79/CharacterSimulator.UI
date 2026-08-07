@@ -154,6 +154,22 @@ public static class AppDbInitializer
                 updated_at TEXT NOT NULL
             );
 
+            -- Last successful scan of roleplay LLM + image engines (fast UI dropdowns).
+            CREATE TABLE IF NOT EXISTS installed_engines (
+                category TEXT NOT NULL,
+                engine_id TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                is_available INTEGER NOT NULL DEFAULT 0,
+                status_detail TEXT,
+                engine_type TEXT,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                scanned_at TEXT NOT NULL,
+                PRIMARY KEY (category, engine_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_installed_engines_category
+                ON installed_engines(category, sort_order);
+
             INSERT OR IGNORE INTO schema_info (version, updated_at) VALUES (1, datetime('now'));
         ";
         cmd.ExecuteNonQuery();
@@ -197,7 +213,21 @@ public static class AppDbInitializer
                     prompt TEXT,
                     engine TEXT,
                     updated_at TEXT NOT NULL
-                );";
+                );
+
+                CREATE TABLE IF NOT EXISTS installed_engines (
+                    category TEXT NOT NULL,
+                    engine_id TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    is_available INTEGER NOT NULL DEFAULT 0,
+                    status_detail TEXT,
+                    engine_type TEXT,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    scanned_at TEXT NOT NULL,
+                    PRIMARY KEY (category, engine_id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_installed_engines_category
+                    ON installed_engines(category, sort_order);";
             catalogCmd.ExecuteNonQuery();
         }
         catch { }

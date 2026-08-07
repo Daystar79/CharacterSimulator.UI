@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="Photino.Blazor" Version="4.0.13" />
+    <!-- Mitigate NU1903 advisory for the transitive native SQLite dependency pulled through the stack. -->
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
   </ItemGroup>
 
   <ItemGroup>

@@ -590,6 +590,11 @@ public sealed class SimulationHost
     {
         if (_waitingForLlm == waiting) return;
         _waitingForLlm = waiting;
+        if (waiting)
+            Services.BusyTaskService.BeginTask("llm_roleplay", "Waiting for LLM roleplay response...");
+        else
+            Services.BusyTaskService.EndTask("llm_roleplay");
+
         OnWaitingChanged?.Invoke(waiting);
     }
 

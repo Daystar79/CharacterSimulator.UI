@@ -368,6 +368,7 @@
         string styleName = ImageArtStyleCatalog.GetById(artStyleId).DisplayName;
 
         _isGenerating = true;
+        using var busy = BusyTaskService.BeginTask("portrait_generation", $"Generating AI Portrait via {engineId} ({styleName})...");
         _errorMessage = "";
         _generatedBytes = null;
         _generatedImagePath = "";

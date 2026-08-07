@@ -12,6 +12,9 @@ public class ProfileService : IDisposable
     private static ProfileService? _instance;
     private bool _disposed = false;
 
+    public static bool HasInstance => _instance != null;
+    public static UserProfile? ActiveProfileOrNull => _instance?.ActiveProfile;
+
     public static ProfileService Instance
     {
         get
@@ -33,6 +36,7 @@ public class ProfileService : IDisposable
     private readonly CharacterProgressRepository _progressRepo;
     private readonly CharacterCatalogRepository _catalogRepo;
     private readonly CharacterPortraitRepository _portraitRepo;
+    private readonly InstalledEngineRepository _installedEnginesRepo;
 
     public event Action<UserProfile?>? OnActiveProfileChanged;
 
@@ -48,10 +52,12 @@ public class ProfileService : IDisposable
         _progressRepo = new CharacterProgressRepository(_conn);
         _catalogRepo = new CharacterCatalogRepository(_conn);
         _portraitRepo = new CharacterPortraitRepository(_conn);
+        _installedEnginesRepo = new InstalledEngineRepository(_conn);
 
         // Bind indexes only — full catalog reconcile is deferred so first UI paint is not blocked.
         CharacterCatalog.BindIndex(_catalogRepo);
         CharacterPortraitService.Bind(_portraitRepo, _catalogRepo);
+        InstalledEngineStore.Bind(_installedEnginesRepo);
 
         EnsureDefaultProfileExists();
     }
@@ -79,19 +85,25 @@ public class ProfileService : IDisposable
         Dispose(false);
     }
 
+    private void SetActiveProfile(UserProfile? profile)
+    {
+        ActiveProfile = profile;
+        Safety.AdultAuth.SetUserAdultAttested(profile?.IsAdultAttested ?? false);
+        OnActiveProfileChanged?.Invoke(ActiveProfile);
+    }
+
     private void EnsureDefaultProfileExists()
     {
         var profiles = _profileRepo.GetAllProfiles();
         if (profiles.Count == 0)
         {
             // Seed default player profile (adult by default)
-            ActiveProfile = _profileRepo.CreateProfile("Player 1", 1995, 1, 1, pin: null, adultAttested: false);
+            SetActiveProfile(_profileRepo.CreateProfile("Player 1", 1995, 1, 1, pin: null, adultAttested: false));
         }
         else
         {
-            ActiveProfile = profiles[0];
+            SetActiveProfile(profiles[0]);
         }
-        OnActiveProfileChanged?.Invoke(ActiveProfile);
     }
 
     public List<UserProfile> GetAllProfiles() => _profileRepo.GetAllProfiles();
@@ -99,8 +111,7 @@ public class ProfileService : IDisposable
     public UserProfile CreateProfile(string name, int dobYear, int dobMonth, int dobDay, string? pin = null, bool adultAttested = false)
     {
         var profile = _profileRepo.CreateProfile(name, dobYear, dobMonth, dobDay, pin, adultAttested);
-        ActiveProfile = profile;
-        OnActiveProfileChanged?.Invoke(ActiveProfile);
+        SetActiveProfile(profile);
         return profile;
     }
 
@@ -111,9 +122,8 @@ public class ProfileService : IDisposable
 
         if (!_profileRepo.VerifyPin(profile, pin ?? "")) return false;
 
-        ActiveProfile = profile;
         _profileRepo.TouchLastOpened(profileId);
-        OnActiveProfileChanged?.Invoke(ActiveProfile);
+        SetActiveProfile(profile);
         return true;
     }
 
@@ -123,8 +133,7 @@ public class ProfileService : IDisposable
         if (success && ActiveProfile?.Id == profileId)
         {
             var remaining = _profileRepo.GetAllProfiles();
-            ActiveProfile = remaining.Count > 0 ? remaining[0] : null;
-            OnActiveProfileChanged?.Invoke(ActiveProfile);
+            SetActiveProfile(remaining.Count > 0 ? remaining[0] : null);
         }
         return success;
     }
@@ -134,6 +143,7 @@ public class ProfileService : IDisposable
     public CharacterProgressRepository Progress => _progressRepo;
     public CharacterCatalogRepository Catalog => _catalogRepo;
     public CharacterPortraitRepository Portraits => _portraitRepo;
+    public InstalledEngineRepository InstalledEngines => _installedEnginesRepo;
 
     /// <summary>Rescan Characters/ into the SQLite catalog index (Refresh UI / post-derive).</summary>
     public int ReconcileCharacterCatalog() => CharacterCatalog.ReconcileFromDisk();

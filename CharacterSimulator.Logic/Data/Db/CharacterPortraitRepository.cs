@@ -51,36 +51,42 @@ public class CharacterPortraitRepository
     public bool Exists(string cardId)
     {
         if (string.IsNullOrWhiteSpace(cardId)) return false;
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "SELECT 1 FROM character_portraits WHERE card_id = @id LIMIT 1;";
-        cmd.Parameters.AddWithValue("@id", cardId);
-        return cmd.ExecuteScalar() != null;
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT 1 FROM character_portraits WHERE card_id = @id LIMIT 1;";
+            cmd.Parameters.AddWithValue("@id", cardId);
+            return cmd.ExecuteScalar() != null;
+        }
     }
 
     public CharacterPortraitRecord? Get(string cardId)
     {
         if (string.IsNullOrWhiteSpace(cardId)) return null;
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT card_id, mime_type, image_blob, prompt, engine, updated_at
-            FROM character_portraits
-            WHERE card_id = @id LIMIT 1;";
-        cmd.Parameters.AddWithValue("@id", cardId);
-
-        using var reader = cmd.ExecuteReader();
-        if (!reader.Read()) return null;
-
-        return new CharacterPortraitRecord
+        lock (_conn)
         {
-            CardId = reader.GetString(0),
-            MimeType = reader.IsDBNull(1) ? "image/jpeg" : reader.GetString(1),
-            ImageBlob = reader.IsDBNull(2) ? Array.Empty<byte>() : (byte[])reader[2],
-            Prompt = reader.IsDBNull(3) ? "" : reader.GetString(3),
-            Engine = reader.IsDBNull(4) ? "" : reader.GetString(4),
-            UpdatedAt = reader.IsDBNull(5)
-                ? DateTime.UtcNow
-                : (DateTime.TryParse(reader.GetString(5), out var dt) ? dt : DateTime.UtcNow)
-        };
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT card_id, mime_type, image_blob, prompt, engine, updated_at
+                FROM character_portraits
+                WHERE card_id = @id LIMIT 1;";
+            cmd.Parameters.AddWithValue("@id", cardId);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return null;
+
+            return new CharacterPortraitRecord
+            {
+                CardId = reader.GetString(0),
+                MimeType = reader.IsDBNull(1) ? "image/jpeg" : reader.GetString(1),
+                ImageBlob = reader.IsDBNull(2) ? Array.Empty<byte>() : (byte[])reader[2],
+                Prompt = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                Engine = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                UpdatedAt = reader.IsDBNull(5)
+                    ? DateTime.UtcNow
+                    : (DateTime.TryParse(reader.GetString(5), out var dt) ? dt : DateTime.UtcNow)
+            };
+        }
     }
 
     public string? GetDataUri(string cardId)
@@ -97,24 +103,27 @@ public class CharacterPortraitRepository
         if (record.ImageBlob == null || record.ImageBlob.Length == 0)
             throw new ArgumentException("image_blob required", nameof(record));
 
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            INSERT INTO character_portraits (card_id, mime_type, image_blob, prompt, engine, updated_at)
-            VALUES (@id, @mime, @blob, @prompt, @engine, @updated)
-            ON CONFLICT(card_id) DO UPDATE SET
-                mime_type = excluded.mime_type,
-                image_blob = excluded.image_blob,
-                prompt = excluded.prompt,
-                engine = excluded.engine,
-                updated_at = excluded.updated_at;";
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO character_portraits (card_id, mime_type, image_blob, prompt, engine, updated_at)
+                VALUES (@id, @mime, @blob, @prompt, @engine, @updated)
+                ON CONFLICT(card_id) DO UPDATE SET
+                    mime_type = excluded.mime_type,
+                    image_blob = excluded.image_blob,
+                    prompt = excluded.prompt,
+                    engine = excluded.engine,
+                    updated_at = excluded.updated_at;";
 
-        cmd.Parameters.AddWithValue("@id", record.CardId);
-        cmd.Parameters.AddWithValue("@mime", string.IsNullOrWhiteSpace(record.MimeType) ? "image/jpeg" : record.MimeType);
-        cmd.Parameters.AddWithValue("@blob", record.ImageBlob);
-        cmd.Parameters.AddWithValue("@prompt", (object?)record.Prompt ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@engine", (object?)record.Engine ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow.ToString("o"));
-        cmd.ExecuteNonQuery();
+            cmd.Parameters.AddWithValue("@id", record.CardId);
+            cmd.Parameters.AddWithValue("@mime", string.IsNullOrWhiteSpace(record.MimeType) ? "image/jpeg" : record.MimeType);
+            cmd.Parameters.AddWithValue("@blob", record.ImageBlob);
+            cmd.Parameters.AddWithValue("@prompt", (object?)record.Prompt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@engine", (object?)record.Engine ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow.ToString("o"));
+            cmd.ExecuteNonQuery();
+        }
     }
 
     public void UpsertBytes(string cardId, byte[] imageBytes, string mimeType = "image/jpeg",
@@ -132,10 +141,13 @@ public class CharacterPortraitRepository
 
     public bool Delete(string cardId)
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM character_portraits WHERE card_id = @id;";
-        cmd.Parameters.AddWithValue("@id", cardId);
-        return cmd.ExecuteNonQuery() > 0;
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM character_portraits WHERE card_id = @id;";
+            cmd.Parameters.AddWithValue("@id", cardId);
+            return cmd.ExecuteNonQuery() > 0;
+        }
     }
 
     /// <summary>Optional: also write a cache file under Assets/Portraits for tools that expect a path.</summary>

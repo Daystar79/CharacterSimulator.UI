@@ -23,7 +23,7 @@ public class UserProfile
     {
         var today = relativeTo ?? DateTime.Today;
         int age = today.Year - DobYear;
-        if (DobYear > 0 && today < new DateTime(today.Year, Math.Clamp(DobMonth, 1, 12), Math.Clamp(DobDay, 1, 28)))
+        if (today.Month < DobMonth || (today.Month == DobMonth && today.Day < DobDay))
         {
             age--;
         }

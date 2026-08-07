@@ -366,7 +366,7 @@ public class TurnManager
     {
         if (character == null) character = new Character { Name = "Unknown" };
         
-        var somaticMatch = Regex.Match(response, @"\[Somatic: (.*?)\]");
+        var somaticMatch = Regex.Match(response, @"\[Somatic:\s*(.*?)\]");
         var somaticZones = somaticMatch.Success ?
             somaticMatch.Groups[1].Value.Split(',').Select(s => s.Trim()).ToList() :
             new List<string>();
@@ -389,11 +389,18 @@ public class TurnManager
             }
         }
 
-        var dialogue = Regex.Replace(response, @"\[Somatic:.*?\]", "").Trim();
-        dialogue = Regex.Replace(dialogue, @"\[Goal:.*?\]", "").Trim();
-        dialogue = Regex.Replace(dialogue, @"\[Image:.*?\]", "").Trim();
+        var bondDelta = 0;
+        var bondMatch = Regex.Match(response, @"\bbond\s*(\+|-)(\d+)\b", RegexOptions.IgnoreCase);
+        if (bondMatch.Success)
+        {
+            bondDelta = int.Parse(bondMatch.Groups[2].Value) * (bondMatch.Groups[1].Value == "+" ? 1 : -1);
+        }
+
+        var dialogue = Regex.Replace(response, @"\[Somatic:\s*.*?\]", "").Trim();
+        dialogue = Regex.Replace(dialogue, @"\[Goal:\s*.*?\]", "").Trim();
+        dialogue = Regex.Replace(dialogue, @"\[Image:\s*.*?\]", "").Trim();
         dialogue = Regex.Replace(dialogue, @"(?:\[State:\s*|<=?state>?\s*)([\s\S]*?)(?:\]|</state>)", "", RegexOptions.IgnoreCase).Trim();
-        dialogue = Regex.Replace(dialogue, @"bond (\+|-)\d+", "", RegexOptions.IgnoreCase).Trim();
+        dialogue = Regex.Replace(dialogue, @"\bbond\s*(\+|-)\d+\b", "", RegexOptions.IgnoreCase).Trim();
         // Also clean fenced json blocks and state tags
         dialogue = Regex.Replace(dialogue, @"```json[\s\S]*?```", "", RegexOptions.IgnoreCase).Trim();
         dialogue = Regex.Replace(dialogue, @"<state>[\s\S]*?</state>", "", RegexOptions.IgnoreCase).Trim();
@@ -410,13 +417,6 @@ public class TurnManager
         // Output hygiene linter (P4)
         var leakAudit = Hygiene.SystemLeakLinter.Audit(dialogue);
         dialogue = leakAudit.SanitizedDialogue;
-
-        var bondDelta = 0;
-        var bondMatch = Regex.Match(response, @"bond (\+|-)(\d+)");
-        if (bondMatch.Success)
-        {
-            bondDelta = int.Parse(bondMatch.Groups[2].Value) * (bondMatch.Groups[1].Value == "+" ? 1 : -1);
-        }
 
         var goalStatus = "None";
         var goalMatch = Regex.Match(response, @"\[Goal: (.*?)\]");
@@ -475,6 +475,27 @@ public class TurnManager
             if (!string.IsNullOrEmpty(character.LogPath) && System.IO.File.Exists(character.LogPath))
             {
                 character.DurableLog = Logs.DurableLogStore.LoadLog(character.LogPath);
+            }
+
+            if (character.DurableLog == null && !string.IsNullOrEmpty(character.CardPath))
+            {
+                string dir = System.IO.Path.GetDirectoryName(character.CardPath) ?? "";
+                string stem = System.IO.Path.GetFileNameWithoutExtension(character.CardPath);
+                string candidatePath = System.IO.Path.Combine(dir, $"{stem}_log.yaml");
+                if (System.IO.File.Exists(candidatePath))
+                {
+                    character.LogPath = candidatePath;
+                    character.DurableLog = Logs.DurableLogStore.LoadLog(candidatePath);
+                }
+                else
+                {
+                    candidatePath = System.IO.Path.Combine(dir, $"{stem.ToLowerInvariant()}_log.yaml");
+                    if (System.IO.File.Exists(candidatePath))
+                    {
+                        character.LogPath = candidatePath;
+                        character.DurableLog = Logs.DurableLogStore.LoadLog(candidatePath);
+                    }
+                }
             }
 
             if (character.DurableLog == null)

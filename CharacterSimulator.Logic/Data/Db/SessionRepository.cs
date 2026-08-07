@@ -57,46 +57,49 @@ public class SessionRepository
             UpdatedAt = DateTime.UtcNow
         };
 
-        using var tx = _conn.BeginTransaction();
-        try
+        lock (_conn)
         {
-            using (var cmd = _conn.CreateCommand())
+            using var tx = _conn.BeginTransaction();
+            try
             {
-                cmd.Transaction = tx;
-                cmd.CommandText = @"
-                    INSERT INTO sessions (id, profile_id, title, scene, genre, mode, status, started_at, updated_at)
-                    VALUES (@id, @pid, @title, @scene, @genre, @mode, @status, @started, @updated);";
-                cmd.Parameters.AddWithValue("@id", session.Id);
-                cmd.Parameters.AddWithValue("@pid", session.ProfileId);
-                cmd.Parameters.AddWithValue("@title", session.Title);
-                cmd.Parameters.AddWithValue("@scene", session.Scene);
-                cmd.Parameters.AddWithValue("@genre", session.Genre);
-                cmd.Parameters.AddWithValue("@mode", session.Mode);
-                cmd.Parameters.AddWithValue("@status", session.Status);
-                cmd.Parameters.AddWithValue("@started", session.StartedAt.ToString("o"));
-                cmd.Parameters.AddWithValue("@updated", session.UpdatedAt.ToString("o"));
-                cmd.ExecuteNonQuery();
-            }
+                using (var cmd = _conn.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = @"
+                        INSERT INTO sessions (id, profile_id, title, scene, genre, mode, status, started_at, updated_at)
+                        VALUES (@id, @pid, @title, @scene, @genre, @mode, @status, @started, @updated);";
+                    cmd.Parameters.AddWithValue("@id", session.Id);
+                    cmd.Parameters.AddWithValue("@pid", session.ProfileId);
+                    cmd.Parameters.AddWithValue("@title", session.Title);
+                    cmd.Parameters.AddWithValue("@scene", session.Scene);
+                    cmd.Parameters.AddWithValue("@genre", session.Genre);
+                    cmd.Parameters.AddWithValue("@mode", session.Mode);
+                    cmd.Parameters.AddWithValue("@status", session.Status);
+                    cmd.Parameters.AddWithValue("@started", session.StartedAt.ToString("o"));
+                    cmd.Parameters.AddWithValue("@updated", session.UpdatedAt.ToString("o"));
+                    cmd.ExecuteNonQuery();
+                }
 
-            for (int i = 0; i < characterSlugs.Count; i++)
+                for (int i = 0; i < characterSlugs.Count; i++)
+                {
+                    using var pCmd = _conn.CreateCommand();
+                    pCmd.Transaction = tx;
+                    pCmd.CommandText = @"
+                        INSERT INTO session_participants (session_id, character_slug, slot_order)
+                        VALUES (@sid, @slug, @order);";
+                    pCmd.Parameters.AddWithValue("@sid", session.Id);
+                    pCmd.Parameters.AddWithValue("@slug", characterSlugs[i]);
+                    pCmd.Parameters.AddWithValue("@order", i);
+                    pCmd.ExecuteNonQuery();
+                }
+
+                tx.Commit();
+            }
+            catch
             {
-                using var pCmd = _conn.CreateCommand();
-                pCmd.Transaction = tx;
-                pCmd.CommandText = @"
-                    INSERT INTO session_participants (session_id, character_slug, slot_order)
-                    VALUES (@sid, @slug, @order);";
-                pCmd.Parameters.AddWithValue("@sid", session.Id);
-                pCmd.Parameters.AddWithValue("@slug", characterSlugs[i]);
-                pCmd.Parameters.AddWithValue("@order", i);
-                pCmd.ExecuteNonQuery();
+                tx.Rollback();
+                throw;
             }
-
-            tx.Commit();
-        }
-        catch
-        {
-            tx.Rollback();
-            throw;
         }
 
         return session;
@@ -104,162 +107,177 @@ public class SessionRepository
 
     public List<DbSession> GetSessionsForProfile(string profileId)
     {
-        var list = new List<DbSession>();
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT id, profile_id, title, scene, genre, mode, status, started_at, updated_at
-            FROM sessions
-            WHERE profile_id = @pid
-            ORDER BY updated_at DESC;";
-        cmd.Parameters.AddWithValue("@pid", profileId);
-
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        lock (_conn)
         {
-            list.Add(new DbSession
+            var list = new List<DbSession>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT id, profile_id, title, scene, genre, mode, status, started_at, updated_at
+                FROM sessions
+                WHERE profile_id = @pid
+                ORDER BY updated_at DESC;";
+            cmd.Parameters.AddWithValue("@pid", profileId);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
             {
-                Id = reader.GetString(0),
-                ProfileId = reader.GetString(1),
-                Title = reader.GetString(2),
-                Scene = reader.GetString(3),
-                Genre = reader.GetString(4),
-                Mode = reader.GetString(5),
-                Status = reader.GetString(6),
-                StartedAt = DateTime.Parse(reader.GetString(7)),
-                UpdatedAt = DateTime.Parse(reader.GetString(8))
-            });
+                list.Add(new DbSession
+                {
+                    Id = reader.GetString(0),
+                    ProfileId = reader.GetString(1),
+                    Title = reader.GetString(2),
+                    Scene = reader.GetString(3),
+                    Genre = reader.GetString(4),
+                    Mode = reader.GetString(5),
+                    Status = reader.GetString(6),
+                    StartedAt = DateTime.Parse(reader.GetString(7)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(8))
+                });
+            }
+            return list;
         }
-        return list;
     }
 
     public void AddTurn(DbSessionTurn turn)
     {
-        using var tx = _conn.BeginTransaction();
-        try
+        lock (_conn)
         {
-            using (var cmd = _conn.CreateCommand())
+            using var tx = _conn.BeginTransaction();
+            try
             {
-                cmd.Transaction = tx;
-                cmd.CommandText = @"
-                    INSERT INTO session_turns (id, session_id, turn_index, speaker, target, dialogue, somatic_json, bond_delta, current_bond, speaker_emotion, meta_json, created_at)
-                    VALUES (@id, @sid, @index, @speaker, @target, @dialogue, @somatic, @bdelta, @cbond, @emotion, @meta, @created);";
-                cmd.Parameters.AddWithValue("@id", turn.Id);
-                cmd.Parameters.AddWithValue("@sid", turn.SessionId);
-                cmd.Parameters.AddWithValue("@index", turn.TurnIndex);
-                cmd.Parameters.AddWithValue("@speaker", turn.Speaker);
-                cmd.Parameters.AddWithValue("@target", turn.Target);
-                cmd.Parameters.AddWithValue("@dialogue", turn.Dialogue);
-                cmd.Parameters.AddWithValue("@somatic", turn.SomaticJson);
-                cmd.Parameters.AddWithValue("@bdelta", turn.BondDelta);
-                cmd.Parameters.AddWithValue("@cbond", turn.CurrentBond);
-                cmd.Parameters.AddWithValue("@emotion", turn.SpeakerEmotion);
-                cmd.Parameters.AddWithValue("@meta", turn.MetaJson);
-                cmd.Parameters.AddWithValue("@created", turn.CreatedAt.ToString("o"));
-                cmd.ExecuteNonQuery();
-            }
+                using (var cmd = _conn.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = @"
+                        INSERT INTO session_turns (id, session_id, turn_index, speaker, target, dialogue, somatic_json, bond_delta, current_bond, speaker_emotion, meta_json, created_at)
+                        VALUES (@id, @sid, @index, @speaker, @target, @dialogue, @somatic, @bdelta, @cbond, @emotion, @meta, @created);";
+                    cmd.Parameters.AddWithValue("@id", turn.Id);
+                    cmd.Parameters.AddWithValue("@sid", turn.SessionId);
+                    cmd.Parameters.AddWithValue("@index", turn.TurnIndex);
+                    cmd.Parameters.AddWithValue("@speaker", turn.Speaker);
+                    cmd.Parameters.AddWithValue("@target", turn.Target);
+                    cmd.Parameters.AddWithValue("@dialogue", turn.Dialogue);
+                    cmd.Parameters.AddWithValue("@somatic", turn.SomaticJson);
+                    cmd.Parameters.AddWithValue("@bdelta", turn.BondDelta);
+                    cmd.Parameters.AddWithValue("@cbond", turn.CurrentBond);
+                    cmd.Parameters.AddWithValue("@emotion", turn.SpeakerEmotion);
+                    cmd.Parameters.AddWithValue("@meta", turn.MetaJson);
+                    cmd.Parameters.AddWithValue("@created", turn.CreatedAt.ToString("o"));
+                    cmd.ExecuteNonQuery();
+                }
 
-            using (var uCmd = _conn.CreateCommand())
+                using (var uCmd = _conn.CreateCommand())
+                {
+                    uCmd.Transaction = tx;
+                    uCmd.CommandText = "UPDATE sessions SET updated_at = @now WHERE id = @sid;";
+                    uCmd.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString("o"));
+                    uCmd.Parameters.AddWithValue("@sid", turn.SessionId);
+                    uCmd.ExecuteNonQuery();
+                }
+
+                tx.Commit();
+            }
+            catch
             {
-                uCmd.Transaction = tx;
-                uCmd.CommandText = "UPDATE sessions SET updated_at = @now WHERE id = @sid;";
-                uCmd.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString("o"));
-                uCmd.Parameters.AddWithValue("@sid", turn.SessionId);
-                uCmd.ExecuteNonQuery();
+                tx.Rollback();
+                throw;
             }
-
-            tx.Commit();
-        }
-        catch
-        {
-            tx.Rollback();
-            throw;
         }
     }
 
     public List<DbSessionTurn> GetTurnsForSession(string sessionId)
     {
-        var list = new List<DbSessionTurn>();
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT id, session_id, turn_index, speaker, target, dialogue, somatic_json, bond_delta, current_bond, speaker_emotion, meta_json, created_at
-            FROM session_turns
-            WHERE session_id = @sid
-            ORDER BY turn_index ASC;";
-        cmd.Parameters.AddWithValue("@sid", sessionId);
-
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        lock (_conn)
         {
-            list.Add(new DbSessionTurn
+            var list = new List<DbSessionTurn>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT id, session_id, turn_index, speaker, target, dialogue, somatic_json, bond_delta, current_bond, speaker_emotion, meta_json, created_at
+                FROM session_turns
+                WHERE session_id = @sid
+                ORDER BY turn_index ASC;";
+            cmd.Parameters.AddWithValue("@sid", sessionId);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
             {
-                Id = reader.GetString(0),
-                SessionId = reader.GetString(1),
-                TurnIndex = reader.GetInt32(2),
-                Speaker = reader.GetString(3),
-                Target = reader.GetString(4),
-                Dialogue = reader.GetString(5),
-                SomaticJson = reader.IsDBNull(6) ? "" : reader.GetString(6),
-                BondDelta = reader.GetInt32(7),
-                CurrentBond = reader.GetInt32(8),
-                SpeakerEmotion = reader.IsDBNull(9) ? "" : reader.GetString(9),
-                MetaJson = reader.IsDBNull(10) ? "" : reader.GetString(10),
-                CreatedAt = DateTime.Parse(reader.GetString(11))
-            });
+                list.Add(new DbSessionTurn
+                {
+                    Id = reader.GetString(0),
+                    SessionId = reader.GetString(1),
+                    TurnIndex = reader.GetInt32(2),
+                    Speaker = reader.GetString(3),
+                    Target = reader.GetString(4),
+                    Dialogue = reader.GetString(5),
+                    SomaticJson = reader.IsDBNull(6) ? "" : reader.GetString(6),
+                    BondDelta = reader.GetInt32(7),
+                    CurrentBond = reader.GetInt32(8),
+                    SpeakerEmotion = reader.IsDBNull(9) ? "" : reader.GetString(9),
+                    MetaJson = reader.IsDBNull(10) ? "" : reader.GetString(10),
+                    CreatedAt = DateTime.Parse(reader.GetString(11))
+                });
+            }
+            return list;
         }
-        return list;
     }
 
     public List<string> GetSessionParticipants(string sessionId)
     {
-        var list = new List<string>();
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT character_slug
-            FROM session_participants
-            WHERE session_id = @sid
-            ORDER BY slot_order ASC;";
-        cmd.Parameters.AddWithValue("@sid", sessionId);
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        lock (_conn)
         {
-            list.Add(reader.GetString(0));
+            var list = new List<string>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT character_slug
+                FROM session_participants
+                WHERE session_id = @sid
+                ORDER BY slot_order ASC;";
+            cmd.Parameters.AddWithValue("@sid", sessionId);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(reader.GetString(0));
+            }
+            return list;
         }
-        return list;
     }
 
     public bool DeleteSession(string sessionId)
     {
-        using var tx = _conn.BeginTransaction();
-        try
+        lock (_conn)
         {
-            using (var cmd = _conn.CreateCommand())
+            using var tx = _conn.BeginTransaction();
+            try
             {
-                cmd.Transaction = tx;
-                cmd.CommandText = "DELETE FROM session_turns WHERE session_id = @sid;";
-                cmd.Parameters.AddWithValue("@sid", sessionId);
-                cmd.ExecuteNonQuery();
+                using (var cmd = _conn.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "DELETE FROM session_turns WHERE session_id = @sid;";
+                    cmd.Parameters.AddWithValue("@sid", sessionId);
+                    cmd.ExecuteNonQuery();
+                }
+                using (var cmd = _conn.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "DELETE FROM session_participants WHERE session_id = @sid;";
+                    cmd.Parameters.AddWithValue("@sid", sessionId);
+                    cmd.ExecuteNonQuery();
+                }
+                using (var cmd = _conn.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "DELETE FROM sessions WHERE id = @sid;";
+                    cmd.Parameters.AddWithValue("@sid", sessionId);
+                    cmd.ExecuteNonQuery();
+                }
+                tx.Commit();
+                return true;
             }
-            using (var cmd = _conn.CreateCommand())
+            catch
             {
-                cmd.Transaction = tx;
-                cmd.CommandText = "DELETE FROM session_participants WHERE session_id = @sid;";
-                cmd.Parameters.AddWithValue("@sid", sessionId);
-                cmd.ExecuteNonQuery();
+                tx.Rollback();
+                return false;
             }
-            using (var cmd = _conn.CreateCommand())
-            {
-                cmd.Transaction = tx;
-                cmd.CommandText = "DELETE FROM sessions WHERE id = @sid;";
-                cmd.Parameters.AddWithValue("@sid", sessionId);
-                cmd.ExecuteNonQuery();
-            }
-            tx.Commit();
-            return true;
-        }
-        catch
-        {
-            tx.Rollback();
-            return false;
         }
     }
 }

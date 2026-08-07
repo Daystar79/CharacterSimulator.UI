@@ -249,13 +249,18 @@
     private async Task DetectRoleplayEngines(bool force)
     {
         _isDetecting = true;
-        _detectionStatus = "🔍 Scanning roleplay LLM providers + models…";
+        bool fromCache = !force && InstalledEngineStore.HasRoleplayCache();
+        _detectionStatus = force
+            ? "🔍 Scanning roleplay LLM providers + models…"
+            : fromCache
+                ? "📂 Loading roleplay engines from database…"
+                : "🔍 Scanning roleplay LLM providers + models…";
         _warningMessage = "";
         StateHasChanged();
 
         try
         {
-            var engines = await LlmEngineDetector.DetectAvailableEnginesAsync();
+            var engines = await LlmEngineDetector.DetectAvailableEnginesAsync(forceRefresh: force);
             _llmProviderOptions = engines
                 .Select(e => new CustomSelect.DropdownOption(
                     e.Id,
@@ -279,10 +284,11 @@
             }
 
             LlmModelFetcher.ClearCache(_selectedRoleplayLlmProvider);
-            await LoadModelOptionsAsync(forceRefresh: true);
+            await LoadModelOptionsAsync(forceRefresh: force);
 
+            string source = fromCache && !force ? "cached" : "scanned";
             _detectionStatus =
-                $"✅ Roleplay: {_selectedRoleplayLlmProvider} · model: {_roleplayModelIdentifier} · {_currentModelOptions.Count} model option(s)";
+                $"✅ Roleplay ({source}): {_selectedRoleplayLlmProvider} · model: {_roleplayModelIdentifier} · {_currentModelOptions.Count} model option(s)";
         }
         catch (Exception ex)
         {
@@ -309,15 +315,18 @@
     private async Task DetectImageEngines(bool force)
     {
         _isDetectingImage = true;
+        bool fromCache = !force && InstalledEngineStore.HasImageCache();
         _detectionStatus = force
             ? "🔍 Probing image engines (Pollinations + SD + agent emit)…"
-            : "🔍 Loading image engines…";
+            : fromCache
+                ? "📂 Loading image engines from database…"
+                : "🔍 Loading image engines…";
         _warningMessage = "";
         StateHasChanged();
 
         try
         {
-            // force: re-run agent emit probes; soft open uses cache
+            // force: re-run agent emit probes + rewrite DB; soft open uses SQLite cache when present
             var imageEngines = await ImageEngineDetector.DetectAvailableImageEnginesAsync(
                 probeAgents: true,
                 forceReprobe: force);
@@ -337,14 +346,15 @@
             _selectedImageEngine = ImageEngineDetector.CoalesceToAvailable(_selectedImageEngine, imageEngines);
 
             ImageModelFetcher.ClearCache(_selectedImageEngine);
-            await LoadImageModelOptionsAsync(forceRefresh: true);
+            await LoadImageModelOptionsAsync(forceRefresh: force);
 
             int agents = imageEngines.Count(e => e.Id.StartsWith("Agent", StringComparison.OrdinalIgnoreCase));
             string imgLabel = _selectedImageEngine == ImageEngineDetector.DefaultEngineId
                 ? "Pollinations (default)"
                 : _selectedImageEngine;
+            string source = fromCache && !force ? "cached" : "scanned";
             _detectionStatus =
-                $"✅ Imaging: {imgLabel} · model: {_selectedImageModel} · {_imageModelOptions.Count} option(s)" +
+                $"✅ Imaging ({source}): {imgLabel} · model: {_selectedImageModel} · {_imageModelOptions.Count} option(s)" +
                 (agents > 0 ? $" · {agents} agent image backend(s)" : "");
         }
         catch (Exception ex)

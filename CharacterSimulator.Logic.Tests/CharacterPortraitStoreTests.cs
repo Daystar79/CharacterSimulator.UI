@@ -70,4 +70,37 @@ public class CharacterPortraitStoreTests
             try { File.Delete(tempDb); } catch { }
         }
     }
+
+    [Fact]
+    public void TryGetStoredDataUri_DiskCacheAutoImport_ReturnsDataUri()
+    {
+        string tempDb = Path.Combine(Path.GetTempPath(), $"test_portrait_cache_{Guid.NewGuid():N}.db");
+        string cardId = $"testcard_{Guid.NewGuid():N}";
+        string cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Portraits");
+        Directory.CreateDirectory(cacheDir);
+        string cacheFile = Path.Combine(cacheDir, cardId + ".jpg");
+
+        try
+        {
+            byte[] fakeImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x01, 0x02, 0x03 };
+            File.WriteAllBytes(cacheFile, fakeImageBytes);
+
+            using var conn = AppDbInitializer.CreateConnection(tempDb);
+            AppDbInitializer.InitializeDatabase(conn);
+            var portraits = new CharacterPortraitRepository(conn);
+            CharacterPortraitService.Bind(portraits);
+
+            // Calling TryGetStoredDataUri when DB is empty auto-imports from disk cache
+            string? dataUri = CharacterPortraitService.TryGetStoredDataUri(cardId);
+            Assert.NotNull(dataUri);
+            Assert.StartsWith("data:image/jpeg;base64,", dataUri);
+            Assert.True(CharacterPortraitService.HasPortrait(cardId));
+        }
+        finally
+        {
+            CharacterPortraitService.Bind(null);
+            try { if (File.Exists(cacheFile)) File.Delete(cacheFile); } catch { }
+            try { File.Delete(tempDb); } catch { }
+        }
+    }
 }

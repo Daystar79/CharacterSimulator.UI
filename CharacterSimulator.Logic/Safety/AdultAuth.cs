@@ -23,6 +23,11 @@ public static class AdultAuth
     public static bool IsAdultPathAuthorized(Character character)
     {
         if (!_userAdultAttested) return false;
+
+        var activeProfile = Services.ProfileService.ActiveProfileOrNull;
+        if (activeProfile != null && !activeProfile.IsAdultEligible())
+            return false;
+
         return AgeGate.IsAdultEligible(character);
     }
 }

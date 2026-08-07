@@ -56,6 +56,31 @@ public class TurnControlContext
         // Setup modal re-reads CurrentSettings when opened.
     }
 
+    /// <summary>
+    /// Persist last-selected primary card without a full UI catalog refresh.
+    /// Must not raise OnUIUpdated — Index's refresh handler would re-enter SelectCharacter
+    /// and cause an infinite load / auto-play storm.
+    /// </summary>
+    public void PatchSelectedCharacter(string? cardFileName)
+    {
+        CurrentSettings ??= new AppSettings();
+        string file = string.IsNullOrWhiteSpace(cardFileName) ? "" : cardFileName.Trim();
+        // Treat legacy "None (...)" placeholders as empty
+        if (file.StartsWith("None", StringComparison.OrdinalIgnoreCase)
+            || file.StartsWith('(')
+            || file.Contains("No Character", StringComparison.OrdinalIgnoreCase)
+            || file.Contains("Not Selected", StringComparison.OrdinalIgnoreCase))
+        {
+            file = "";
+        }
+
+        bool changed = !string.Equals(CurrentSettings.SelectedCharA, file, StringComparison.Ordinal);
+        CurrentSettings.SelectedCharA = file;
+        if (changed)
+            AppConfigService.SaveSettings(CurrentSettings);
+        // No OnSettingsChanged / OnUIUpdated — selection is already applied in the right panel.
+    }
+
     public void RefreshUI()
     {
         CurrentSettings = AppConfigService.LoadSettings();

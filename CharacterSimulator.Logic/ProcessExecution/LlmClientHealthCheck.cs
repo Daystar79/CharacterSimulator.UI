@@ -13,7 +13,7 @@ public static class LlmClientHealthCheck
 {
     private const int DefaultTestTimeoutSeconds = 30;
     private const int MaximumTestPromptLength = 100;
-    
+
     /// <summary>
     /// Tests an LLM client with a simple prompt
     /// </summary>
@@ -23,16 +23,16 @@ public static class LlmClientHealthCheck
     public static async Task<bool> TestClientAsync(ProcessExecutor executor, TimeSpan? timeout = null)
     {
         if (executor == null) return false;
-        
+
         try
         {
             var testPrompt = "Respond with a single word: hello";
             var testTimeout = timeout ?? TimeSpan.FromSeconds(DefaultTestTimeoutSeconds);
-            
+
             using var cts = new CancellationTokenSource(testTimeout);
-            
+
             var result = await executor.ExecuteAsync(testPrompt, cts.Token).ConfigureAwait(false);
-            
+
             // Client is healthy if it produced any non-error output
             return result.Success || !string.IsNullOrWhiteSpace(result.StandardOutput);
         }
@@ -41,7 +41,7 @@ public static class LlmClientHealthCheck
             return false;
         }
     }
-    
+
     /// <summary>
     /// Gets the status of an LLM client
     /// </summary>
@@ -51,10 +51,10 @@ public static class LlmClientHealthCheck
     {
         if (executor == null)
             return "Client not initialized";
-            
+
         if (!executor.ValidateExecutable())
             return $"Executable not found: {executor.ExecutablePath}";
-            
+
         try
         {
             var versionInfo = executor.GetVersionInfo();
@@ -62,7 +62,7 @@ public static class LlmClientHealthCheck
             {
                 return $"Ready - {versionInfo.FileVersion} (Active: {executor.ActiveProcesses} processes)";
             }
-            
+
             // Try to get file info
             var fileInfo = new FileInfo(executor.ExecutablePath);
             return $"Ready - {fileInfo.LastWriteTime:yyyy-MM-dd} (Active: {executor.ActiveProcesses} processes)";
@@ -72,7 +72,7 @@ public static class LlmClientHealthCheck
             return $"Error: {ex.Message}";
         }
     }
-    
+
     /// <summary>
     /// Gets detailed status information about a process executor
     /// </summary>
@@ -88,7 +88,7 @@ public static class LlmClientHealthCheck
                 Message = "Client not initialized"
             };
         }
-        
+
         var status = new LlmClientStatus
         {
             ExecutablePath = executor.ExecutablePath,
@@ -97,17 +97,17 @@ public static class LlmClientHealthCheck
             ActiveProcesses = executor.ActiveProcesses,
             Status = executor.ValidateExecutable() ? ClientStatus.Ready : ClientStatus.ExecutableNotFound
         };
-        
+
         try
         {
             var versionInfo = executor.GetVersionInfo();
             if (versionInfo != null)
             {
-                status.Version = versionInfo.FileVersion;
-                status.ProductName = versionInfo.ProductName;
+                status.Version = versionInfo.FileVersion ?? "Unknown";
+                status.ProductName = versionInfo.ProductName ?? "Unknown";
                 status.Status = ClientStatus.Ready;
             }
-            
+
             var fileInfo = new FileInfo(executor.ExecutablePath);
             status.FileSize = fileInfo.Length;
             status.LastModified = fileInfo.LastWriteTime;
@@ -118,10 +118,10 @@ public static class LlmClientHealthCheck
             status.Status = ClientStatus.Error;
             status.Message = ex.Message;
         }
-        
+
         return status;
     }
-    
+
     /// <summary>
     /// Validates that a CLI tool is accessible and working
     /// </summary>
@@ -138,21 +138,21 @@ public static class LlmClientHealthCheck
     {
         if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
             return false;
-            
+
         try
         {
             using var executor = new ProcessExecutor(
-                executablePath, 
-                testArguments, 
+                executablePath,
+                testArguments,
                 timeout ?? TimeSpan.FromSeconds(DefaultTestTimeoutSeconds));
-                
+
             var result = await executor.ExecuteAsync("", CancellationToken.None).ConfigureAwait(false);
-            
+
             if (!string.IsNullOrEmpty(expectedOutput))
             {
                 return result.StandardOutput.Contains(expectedOutput, StringComparison.OrdinalIgnoreCase);
             }
-            
+
             return result.Success || !string.IsNullOrWhiteSpace(result.StandardOutput);
         }
         catch
@@ -160,7 +160,7 @@ public static class LlmClientHealthCheck
             return false;
         }
     }
-    
+
     /// <summary>
     /// Pings an LLM client to check responsiveness
     /// </summary>
@@ -171,14 +171,14 @@ public static class LlmClientHealthCheck
     {
         var pingTimeout = timeout ?? TimeSpan.FromSeconds(10);
         var stopwatch = Stopwatch.StartNew();
-        
+
         try
         {
             using var cts = new CancellationTokenSource(pingTimeout);
             var result = await executor.ExecuteAsync("ping", cts.Token).ConfigureAwait(false);
-            
+
             stopwatch.Stop();
-            
+
             return new PingResult
             {
                 Success = result.Success,
@@ -225,31 +225,31 @@ public class LlmClientStatus
 {
     /// <summary>Overall status of the client</summary>
     public ClientStatus Status { get; set; }
-    
+
     /// <summary>Status message</summary>
     public string Message { get; set; }
-    
+
     /// <summary>Path to the executable</summary>
     public string ExecutablePath { get; set; }
-    
+
     /// <summary>Arguments template</summary>
     public string ArgumentsTemplate { get; set; }
-    
+
     /// <summary>Default timeout</summary>
     public TimeSpan DefaultTimeout { get; set; }
-    
+
     /// <summary>Number of active processes</summary>
     public int ActiveProcesses { get; set; }
-    
+
     /// <summary>File version</summary>
     public string Version { get; set; }
-    
+
     /// <summary>Product name</summary>
     public string ProductName { get; set; }
-    
+
     /// <summary>File size in bytes</summary>
     public long FileSize { get; set; }
-    
+
     /// <summary>Last modified date</summary>
     public DateTime LastModified { get; set; }
 }
@@ -261,13 +261,13 @@ public class PingResult
 {
     /// <summary>Whether the ping was successful</summary>
     public bool Success { get; set; }
-    
+
     /// <summary>Latency of the ping</summary>
     public TimeSpan Latency { get; set; }
-    
+
     /// <summary>Whether the ping timed out</summary>
     public bool TimedOut { get; set; }
-    
+
     /// <summary>Error message if any</summary>
     public string ErrorMessage { get; set; }
 }

@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using CharacterSimulator.Logic.Services
 @inject TurnControlContext ControlContext
 @inject SimulationHost SimHost
 @inject IJSRuntime JS
@@ -90,23 +91,38 @@
 
     <!-- 4. BOTTOM STATUS BAR -->
     <div class="bottom-status-bar">
-        <span>@_statusText</span>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;">@_statusText</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
             @if (_isWaitingForLlm)
             {
-                <div class="waiting-badge">
+                <div class="waiting-badge" style="height: 20px; padding: 0 0.4rem; font-size: 0.65rem; display: flex; align-items: center; border-radius: 4px;">
                     <span>⏳</span>
                     <span>Waiting for LLM response...</span>
                 </div>
             }
-            <span style="background: #0f172a; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">
-                ⚡ @_activeLlmInfo
-            </span>
-            <span>.NET 10.0 • Blazor Desktop</span>
+            <div class="ai-status-window" title="@_activeLlmInfo">
+                <span style="color: var(--accent-green);">⚡</span>
+                <span class="ai-status-text">@_activeLlmInfo</span>
+            </div>
+            <span style="font-size: 0.68rem; color: var(--text-muted);">.NET 10.0 • Blazor Desktop</span>
         </div>
     </div>
 
 </div>
+
+<!-- THINKING / TASK PROCESSING POPUP OVERLAY -->
+@if (BusyTaskService.IsBusy)
+{
+    <div class="thinking-toast-popup">
+        <div class="thinking-spinner">
+            <div class="thinking-glow-dot"></div>
+        </div>
+        <div class="thinking-details">
+            <div class="thinking-title">🔮 APPLICATION THINKING</div>
+            <div class="thinking-text">@BusyTaskService.ActiveTaskText</div>
+        </div>
+    </div>
+}
 
 <!-- MODAL DIALOGS -->
 @if (_showProfilePickerModal)
@@ -187,8 +203,12 @@
         SimHost.OnStatus += OnHostStatus;
         SimHost.OnModeChanged += OnHostModeChanged;
         SimHost.OnRequestSetup += OnHostRequestSetup;
-        // Do not touch ProfileService here — that opened SQLite during first layout render
-        // and any exception left the HTML splash stuck forever.
+        BusyTaskService.OnTaskStateChanged += OnBusyTaskStateChanged;
+    }
+
+    private void OnBusyTaskStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -225,6 +245,7 @@
         SimHost.OnStatus -= OnHostStatus;
         SimHost.OnModeChanged -= OnHostModeChanged;
         SimHost.OnRequestSetup -= OnHostRequestSetup;
+        BusyTaskService.OnTaskStateChanged -= OnBusyTaskStateChanged;
         if (_profileSvc != null)
             _profileSvc.OnActiveProfileChanged -= OnProfileAutoRefresh;
     }
@@ -413,7 +434,7 @@
         _showSavedSessionsModal = false;
         if (session != null)
         {
-            _statusText = $"Resumed session '{session.Title}'. Scene: [{session.Genre}] {session.Scene}";
+            _statusText = $"Resumed session '{session.Title}'.";
             // Push session scene into settings so left-panel Location & Genre pick it up
             try
             {

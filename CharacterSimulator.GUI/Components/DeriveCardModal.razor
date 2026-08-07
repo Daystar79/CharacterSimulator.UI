@@ -196,6 +196,7 @@
         _isWorking = true;
         _phase = Phase.Working;
         _statusLine = "Resolving canon source…";
+        using var busy = BusyTaskService.BeginTask("derive_card", $"Deriving Card for '{_characterName}' ({_llmProvider})...");
         StateHasChanged();
 
         try

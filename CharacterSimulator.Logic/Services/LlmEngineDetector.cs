@@ -14,8 +14,25 @@ public class LlmEngineDetector
 
     /// <summary>
     /// Auto-detects locally available LLM providers (CLI tools & local server APIs).
+    /// When <paramref name="forceRefresh"/> is false and a prior scan is in SQLite, returns the
+    /// cached list for a fast UI lookup. A full scan always writes back to the database.
     /// </summary>
-    public static async Task<List<DetectedLlmEngine>> DetectAvailableEnginesAsync()
+    public static async Task<List<DetectedLlmEngine>> DetectAvailableEnginesAsync(bool forceRefresh = false)
+    {
+        if (!forceRefresh)
+        {
+            var cached = InstalledEngineStore.TryGetRoleplayCached();
+            if (cached is { Count: > 0 })
+                return cached;
+        }
+
+        var engines = await ScanLiveAsync().ConfigureAwait(false);
+        InstalledEngineStore.SaveRoleplay(engines);
+        return engines;
+    }
+
+    /// <summary>Live PATH / API probe only (does not read or write the DB cache).</summary>
+    public static async Task<List<DetectedLlmEngine>> ScanLiveAsync()
     {
         var engines = new List<DetectedLlmEngine>();
 

@@ -28,10 +28,30 @@ public static class ImageEngineDetector
     /// <summary>
     /// Auto-detect image generators. Pollinations is always first and is the product default.
     /// Optional agent probes (AGY, Grok) run only when those CLIs are present.
+    /// When <paramref name="forceReprobe"/> is false and a prior scan is in SQLite, returns the
+    /// cached list for a fast UI lookup. A live scan always writes back to the database.
     /// </summary>
     /// <param name="probeAgents">When true, run emit probes for installed multimodal CLIs.</param>
-    /// <param name="forceReprobe">Bypass probe cache (e.g. user clicked Auto-Detect).</param>
+    /// <param name="forceReprobe">Bypass DB + in-memory probe cache (e.g. user clicked Auto-Detect).</param>
     public static async Task<List<DetectedImageEngine>> DetectAvailableImageEnginesAsync(
+        bool probeAgents = true,
+        bool forceReprobe = false,
+        CancellationToken ct = default)
+    {
+        if (!forceReprobe)
+        {
+            var cached = InstalledEngineStore.TryGetImageCached();
+            if (cached is { Count: > 0 })
+                return cached;
+        }
+
+        var engines = await ScanLiveAsync(probeAgents, forceReprobe, ct).ConfigureAwait(false);
+        InstalledEngineStore.SaveImage(engines);
+        return engines;
+    }
+
+    /// <summary>Live HTTP / emit probe only (does not read the DB cache; still may use emit probe memory cache).</summary>
+    public static async Task<List<DetectedImageEngine>> ScanLiveAsync(
         bool probeAgents = true,
         bool forceReprobe = false,
         CancellationToken ct = default)

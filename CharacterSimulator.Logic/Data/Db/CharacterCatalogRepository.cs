@@ -40,110 +40,128 @@ public class CharacterCatalogRepository
 
     public List<CharacterCatalogRecord> ListAll()
     {
-        var list = new List<CharacterCatalogRecord>();
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT card_id, file_name, display_name, call_name, age, canon_adult,
-                   description, physical_short, avatar_path, source_label, is_derived,
-                   file_mtime_utc, content_fingerprint, updated_at
-            FROM character_catalog
-            ORDER BY display_name COLLATE NOCASE, file_name COLLATE NOCASE;";
+        lock (_conn)
+        {
+            var list = new List<CharacterCatalogRecord>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT card_id, file_name, display_name, call_name, age, canon_adult,
+                       description, physical_short, avatar_path, source_label, is_derived,
+                       file_mtime_utc, content_fingerprint, updated_at
+                FROM character_catalog
+                ORDER BY display_name COLLATE NOCASE, file_name COLLATE NOCASE;";
 
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-            list.Add(ReadRecord(reader));
-        return list;
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                list.Add(ReadRecord(reader));
+            return list;
+        }
     }
 
     public CharacterCatalogRecord? GetByCardId(string cardId)
     {
         if (string.IsNullOrWhiteSpace(cardId)) return null;
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT card_id, file_name, display_name, call_name, age, canon_adult,
-                   description, physical_short, avatar_path, source_label, is_derived,
-                   file_mtime_utc, content_fingerprint, updated_at
-            FROM character_catalog
-            WHERE card_id = @id LIMIT 1;";
-        cmd.Parameters.AddWithValue("@id", cardId);
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT card_id, file_name, display_name, call_name, age, canon_adult,
+                       description, physical_short, avatar_path, source_label, is_derived,
+                       file_mtime_utc, content_fingerprint, updated_at
+                FROM character_catalog
+                WHERE card_id = @id LIMIT 1;";
+            cmd.Parameters.AddWithValue("@id", cardId);
 
-        using var reader = cmd.ExecuteReader();
-        return reader.Read() ? ReadRecord(reader) : null;
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? ReadRecord(reader) : null;
+        }
     }
 
     public CharacterCatalogRecord? GetByFileName(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName)) return null;
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT card_id, file_name, display_name, call_name, age, canon_adult,
-                   description, physical_short, avatar_path, source_label, is_derived,
-                   file_mtime_utc, content_fingerprint, updated_at
-            FROM character_catalog
-            WHERE file_name = @fn LIMIT 1;";
-        cmd.Parameters.AddWithValue("@fn", Path.GetFileName(fileName));
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT card_id, file_name, display_name, call_name, age, canon_adult,
+                       description, physical_short, avatar_path, source_label, is_derived,
+                       file_mtime_utc, content_fingerprint, updated_at
+                FROM character_catalog
+                WHERE file_name = @fn LIMIT 1;";
+            cmd.Parameters.AddWithValue("@fn", Path.GetFileName(fileName));
 
-        using var reader = cmd.ExecuteReader();
-        return reader.Read() ? ReadRecord(reader) : null;
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? ReadRecord(reader) : null;
+        }
     }
 
     public void Upsert(CharacterCatalogRecord record)
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            INSERT INTO character_catalog (
-                card_id, file_name, display_name, call_name, age, canon_adult,
-                description, physical_short, avatar_path, source_label, is_derived,
-                file_mtime_utc, content_fingerprint, updated_at)
-            VALUES (
-                @id, @fn, @name, @call, @age, @adult,
-                @desc, @phys, @avatar, @src, @derived,
-                @mtime, @fp, @updated)
-            ON CONFLICT(card_id) DO UPDATE SET
-                file_name = excluded.file_name,
-                display_name = excluded.display_name,
-                call_name = excluded.call_name,
-                age = excluded.age,
-                canon_adult = excluded.canon_adult,
-                description = excluded.description,
-                physical_short = excluded.physical_short,
-                avatar_path = excluded.avatar_path,
-                source_label = excluded.source_label,
-                is_derived = excluded.is_derived,
-                file_mtime_utc = excluded.file_mtime_utc,
-                content_fingerprint = excluded.content_fingerprint,
-                updated_at = excluded.updated_at;";
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO character_catalog (
+                    card_id, file_name, display_name, call_name, age, canon_adult,
+                    description, physical_short, avatar_path, source_label, is_derived,
+                    file_mtime_utc, content_fingerprint, updated_at)
+                VALUES (
+                    @id, @fn, @name, @call, @age, @adult,
+                    @desc, @phys, @avatar, @src, @derived,
+                    @mtime, @fp, @updated)
+                ON CONFLICT(card_id) DO UPDATE SET
+                    file_name = excluded.file_name,
+                    display_name = excluded.display_name,
+                    call_name = excluded.call_name,
+                    age = excluded.age,
+                    canon_adult = excluded.canon_adult,
+                    description = excluded.description,
+                    physical_short = excluded.physical_short,
+                    avatar_path = excluded.avatar_path,
+                    source_label = excluded.source_label,
+                    is_derived = excluded.is_derived,
+                    file_mtime_utc = excluded.file_mtime_utc,
+                    content_fingerprint = excluded.content_fingerprint,
+                    updated_at = excluded.updated_at;";
 
-        cmd.Parameters.AddWithValue("@id", record.CardId);
-        cmd.Parameters.AddWithValue("@fn", record.FileName);
-        cmd.Parameters.AddWithValue("@name", record.DisplayName);
-        cmd.Parameters.AddWithValue("@call", (object?)record.CallName ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@age", record.Age);
-        cmd.Parameters.AddWithValue("@adult", record.CanonAdult ? 1 : 0);
-        cmd.Parameters.AddWithValue("@desc", (object?)record.Description ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@phys", (object?)record.PhysicalShort ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@avatar", (object?)record.AvatarPath ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@src", (object?)record.SourceLabel ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@derived", record.IsDerived ? 1 : 0);
-        cmd.Parameters.AddWithValue("@mtime", (object?)record.FileMtimeUtc ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@fp", (object?)record.ContentFingerprint ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow.ToString("o"));
-        cmd.ExecuteNonQuery();
+            cmd.Parameters.AddWithValue("@id", record.CardId);
+            cmd.Parameters.AddWithValue("@fn", record.FileName);
+            cmd.Parameters.AddWithValue("@name", record.DisplayName);
+            cmd.Parameters.AddWithValue("@call", (object?)record.CallName ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@age", record.Age);
+            cmd.Parameters.AddWithValue("@adult", record.CanonAdult ? 1 : 0);
+            cmd.Parameters.AddWithValue("@desc", (object?)record.Description ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@phys", (object?)record.PhysicalShort ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@avatar", (object?)record.AvatarPath ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@src", (object?)record.SourceLabel ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@derived", record.IsDerived ? 1 : 0);
+            cmd.Parameters.AddWithValue("@mtime", (object?)record.FileMtimeUtc ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@fp", (object?)record.ContentFingerprint ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow.ToString("o"));
+            cmd.ExecuteNonQuery();
+        }
     }
 
     public bool Delete(string cardId)
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM character_catalog WHERE card_id = @id;";
-        cmd.Parameters.AddWithValue("@id", cardId);
-        return cmd.ExecuteNonQuery() > 0;
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM character_catalog WHERE card_id = @id;";
+            cmd.Parameters.AddWithValue("@id", cardId);
+            return cmd.ExecuteNonQuery() > 0;
+        }
     }
 
     public int Count()
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM character_catalog;";
-        return Convert.ToInt32(cmd.ExecuteScalar());
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM character_catalog;";
+            return Convert.ToInt32(cmd.ExecuteScalar());
+        }
     }
 
     /// <summary>

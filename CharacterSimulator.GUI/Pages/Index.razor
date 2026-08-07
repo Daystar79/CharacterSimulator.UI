@@ -1,4 +1,5 @@
 @page "/"
+@using CharacterSimulator.Logic.Services
 @inject TurnControlContext ControlContext
 @inject SimulationHost SimHost
 @inject IJSRuntime JS
@@ -30,8 +31,8 @@
             @(_isGeneratingScene ? "✨ Rendering Scene..." : "✨ Generate Scene Artwork")
         </button>
 
-        <div style="margin-top: 0.75rem; background: #0f172a; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.55rem;">
-            <div>
+        <div style="margin-top: 0.75rem; background: #0f172a; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.55rem; width: 100%; box-sizing: border-box;">
+            <div style="width: 100%;">
                 <div class="section-title" style="margin-bottom: 0.3rem; font-size: 0.7rem; color: var(--accent-purple);">
                     <span>🎭</span>
                     <span>GENRE (environment only)</span>
@@ -42,7 +43,7 @@
                 </div>
             </div>
 
-            <div>
+            <div style="width: 100%;">
                 <div class="section-title" style="margin-bottom: 0.3rem; font-size: 0.7rem; color: var(--accent-amber);">
                     <span>📍</span>
                     <span>LOCATION &amp; ATMOSPHERE</span>
@@ -54,15 +55,20 @@
                     @bind:event="oninput"
                     @onfocusout="PersistSceneFields"
                     placeholder="Place, time of day, weather, sensory detail… this is the active scene for roleplay and scene art."
-                    style="font-size: 0.72rem; line-height: 1.4; resize: vertical; min-height: 4.5rem; font-family: inherit;"
+                    style="width: 100%; box-sizing: border-box; font-size: 0.72rem; line-height: 1.4; resize: vertical; min-height: 4.5rem; font-family: inherit;"
                     title="Saved to settings. Used when you Play / Send and for Generate Scene Artwork."></textarea>
-                <div style="display: flex; gap: 0.35rem; margin-top: 0.35rem; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-secondary" style="font-size: 0.62rem; padding: 0.2rem 0.45rem;" @onclick="ApplyGenrePreset" title="Fill box with this genre's first preset place">
-                        ⇢ Use genre preset
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.35rem; width: 100%;">
+                    <button type="button" class="btn btn-primary" style="width: 100%; font-size: 0.65rem; padding: 0.25rem 0.45rem; justify-content: center;" disabled="@_isGeneratingLocation" @onclick="GenerateAiLocationAsync" title="Use AI to generate a vivid, custom location & atmosphere description for this genre">
+                        @(_isGeneratingLocation ? "✨ Generating Scene..." : "✨ Generate AI Location")
                     </button>
-                    <button type="button" class="btn btn-secondary" style="font-size: 0.62rem; padding: 0.2rem 0.45rem;" @onclick="PersistSceneFields" title="Save genre + location now">
-                        💾 Save scene
-                    </button>
+                    <div style="display: flex; gap: 0.35rem; width: 100%;">
+                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 0.62rem; padding: 0.2rem 0.45rem; justify-content: center;" @onclick="ApplyGenrePreset" title="Fill box with this genre's default preset place">
+                            ⇢ Static preset
+                        </button>
+                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 0.62rem; padding: 0.2rem 0.45rem; justify-content: center;" @onclick="PersistSceneFields" title="Save genre + location now">
+                            💾 Save scene
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -91,7 +97,7 @@
                 {
                     <div class="chat-bubble chat-system">
                         <div class="dialogue-text">
-                            Load a character on the right to auto-start the simulation.
+                            Load a character on the right to auto-start, or restore last card then press ▶ Play.
                             Slash commands: /help /play /pause /step /stop /scene /clear /adult on
                         </div>
                     </div>
@@ -172,77 +178,70 @@
         }
     </div>
 
-    <!-- RIGHT PANEL: SINGLE CHARACTER WITH LOAD TAB AND ADD BUTTON -->
-    <div class="character-panel character-panel-right">
-        <!-- TAB HEADER: Character tab + Add button on the right -->
-        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.75rem;">
-            <div class="panel-tabs-header" style="flex: 1;">
-                <button class="panel-tab-btn active" style="width: 100%;">
-                    @(_isCharacterLoaded ? _charName : "LOAD CHARACTER")
-                </button>
-            </div>
-            <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.7rem; white-space: nowrap;" @onclick="ShowAddCharacter">
-                ➕ Add
+    <!-- RIGHT PANEL: SINGLE CHARACTER VIEW -->
+    <div class="character-panel character-panel-right" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+        <!-- TAB HEADER: Character Title -->
+        <div class="panel-tabs-header" style="margin-bottom: 0.5rem; width: 100%; flex: 0 0 auto;">
+            <button class="panel-tab-btn active" style="width: 100%;">
+                👤 @(_isCharacterLoaded ? _charName : "CHARACTER PROFILE")
             </button>
         </div>
 
-        <!-- CHARACTER SELECTOR AND DISPLAY -->
-        <div style="display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; max-height: calc(100vh - 160px); padding-right: 0.25rem;">
+        <!-- CHARACTER SELECTOR AND DISPLAY CONTAINER -->
+        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden;">
             <!-- CHARACTER SELECTOR DROPDOWN -->
-            <div style="background: #0f172a; border: 1px solid var(--accent-blue); border-radius: 6px; padding: 0.5rem;">
+            <div style="background: #0f172a; border: 1px solid var(--accent-blue); border-radius: 6px; padding: 0.5rem; flex: 0 0 auto;">
                 <label class="form-label" style="font-size: 0.68rem; color: var(--accent-blue); font-weight: 700; margin-bottom: 0.25rem;">📂 SELECT CHARACTER:</label>
                 <div style="display: flex; gap: 0.5rem;">
-                    <CustomSelect Value="@_selectedCharFile" ValueChanged='(val => SelectCharacter(val))' Options="_characterDropdownOptions" style="flex: 1;" />
+                    <CustomSelect Value="@_selectedCharFile" ValueChanged='(val => SelectCharacter(val, autoPlay: true))' Options="_characterDropdownOptions" style="flex: 1;" />
                     @if (_isCharacterLoaded)
                     {
-                        <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; white-space: nowrap;" @onclick="ClearCharacter">✕ Remove</button>
+                        <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; white-space: nowrap;" @onclick="ClearCharacter">✕ Clear</button>
                     }
                 </div>
             </div>
 
             @if (!_isCharacterLoaded)
             {
-                <div class="canvas-fallback" style="padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
+                <div class="canvas-fallback" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
                     <div class="canvas-avatar-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">👤</div>
                     <div class="canvas-char-name" style="color: var(--accent-amber); font-weight: 700;">No Character Selected</div>
                     <div class="canvas-bio" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
-                        Select a character card from the dropdown above to load a character.
+                        Select a character card from the dropdown above to load a character onto the stage.
                     </div>
                 </div>
             }
             else
             {
-                <div style="border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a; height: 100%; display: flex; flex-direction: column;">
-                    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                        <!-- CHARACTER IMAGE -->
-                        <div style="flex: 0 0 75%; display: flex; justify-content: center; align-items: center; min-height: 200px; background: rgba(0,0,0,0.3); border-radius: 4px; margin-bottom: 0.5rem;">
-                            @if (!string.IsNullOrEmpty(_charAvatarPath) && (System.IO.File.Exists(_charAvatarPath) || _charAvatarPath.StartsWith("http") || _charAvatarPath.StartsWith("data:")))
-                            {
-                                <img src="@_charAvatarPath" alt="@_charName" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;" />
-                            }
-                            else
-                            {
-                                <div class="canvas-fallback" style="padding: 1rem;">
-                                    <div class="canvas-avatar-icon" style="font-size: 2rem;">👤</div>
-                                    <div class="canvas-char-name" style="margin-top: 0.5rem;">@_charName @(_charAge > 0 ? $"({_charAge})" : "")</div>
-                                </div>
-                            }
-                        </div>
-                        <!-- CHARACTER DESCRIPTION -->
-                        <div style="flex: 0 0 25%; min-height: 80px; display: flex; flex-direction: column;">
-                            <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.2rem;">📖 DESCRIPTION</div>
-                            <textarea 
-                                @bind="_charDescription" 
-                                @bind:event="oninput"
-                                style="flex: 1; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit;"
-                                placeholder="Click to edit description..."
-                                title="Click to edit character description"></textarea>
-                        </div>
+                <div style="flex: 1; min-height: 0; border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a; display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden;">
+                    <!-- CHARACTER IMAGE (Fills remainder of vertical space) -->
+                    <div style="flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); border-radius: 6px; overflow: hidden; padding: 0.25rem;">
+                        @if (!string.IsNullOrEmpty(_charAvatarPath) && (System.IO.File.Exists(_charAvatarPath) || _charAvatarPath.StartsWith("http") || _charAvatarPath.StartsWith("data:")))
+                        {
+                            <img src="@_charAvatarPath" alt="@_charName" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;" />
+                        }
+                        else
+                        {
+                            <div class="canvas-fallback" style="padding: 1rem; text-align: center;">
+                                <div class="canvas-avatar-icon" style="font-size: 3rem;">👤</div>
+                                <div class="canvas-char-name" style="margin-top: 0.5rem; font-size: 0.9rem; font-weight: 700;">@_charName @(_charAge > 0 ? $"({_charAge})" : "")</div>
+                            </div>
+                        }
                     </div>
+
+                    <!-- CHARACTER DESCRIPTION -->
+                    <div style="flex: 0 0 110px; display: flex; flex-direction: column; min-height: 0;">
+                        <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.2rem;">📖 DESCRIPTION</div>
+                        <textarea 
+                            @bind="_charDescription" 
+                            @bind:event="oninput"
+                            style="flex: 1; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
+                            placeholder="Click to edit description..."
+                            title="Click to edit character description"></textarea>
+                    </div>
+
                     <!-- GENERATE PORTRAIT BUTTON -->
-                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                        <button class="btn btn-secondary" style="flex: 1; font-size: 0.7rem; padding: 0.25rem;" @onclick="() => OpenGeneratePortraitModal(_charPhysical, _selectedCharFile)">✨ Generate Portrait</button>
-                    </div>
+                    <button class="btn btn-secondary" style="width: 100%; font-size: 0.7rem; padding: 0.3rem; justify-content: center; flex: 0 0 auto;" @onclick="() => OpenGeneratePortraitModal(_charPhysical, _selectedCharFile)">✨ Generate Portrait</button>
                 </div>
             }
         </div>
@@ -264,6 +263,7 @@
     private string _portraitCardFile = "";
     private string _sceneImagePath = "";
     private bool _isGeneratingScene = false;
+    private bool _isGeneratingLocation = false;
 
     // Live scene (left panel) — genre + freeform location become the roleplay scene
     private string _selectedGenre = SceneGenreCatalog.DefaultGenreId;
@@ -288,6 +288,7 @@
     {
         PersistSceneFields(); // ensure typed location is saved before generate
         _isGeneratingScene = true;
+        using var busy = BusyTaskService.BeginTask("scene_artwork", $"Rendering Scene Artwork ({SceneGenreCatalog.GetById(_selectedGenre).DisplayName})...");
         StateHasChanged();
         try
         {
@@ -361,6 +362,74 @@
         StateHasChanged();
     }
 
+    private async Task GenerateAiLocationAsync()
+    {
+        _isGeneratingLocation = true;
+        using var busy = BusyTaskService.BeginTask("ai_location", $"Generating AI Location ({SceneGenreCatalog.GetById(_selectedGenre).DisplayName})...");
+        StateHasChanged();
+        try
+        {
+            var settings = ControlContext.CurrentSettings ?? AppConfigService.LoadSettings();
+            string provider = settings?.RoleplayLlmProvider ?? "Mock";
+            var client = LlmDiscoveryService.CreateClient(provider);
+
+            string genreName = SceneGenreCatalog.GetById(_selectedGenre).DisplayName;
+            string prompt = $"You are a creative roleplay worldbuilder. Generate a vivid 2 to 3 sentence location and atmosphere description for a {genreName} roleplay scene. " +
+                            $"Include environmental details, lighting, weather or time of day, and sensory atmosphere. " +
+                            (_isCharacterLoaded ? $"The scene features {_charName}." : "") +
+                            $" Do not output any preamble, commentary, markdown, or quotation marks. Output ONLY the raw description text.";
+
+            _outputLogs.Add(new LogEntryModel
+            {
+                Timestamp = DateTime.Now,
+                Message = $"Generating AI scene location for '{genreName}' via {provider}…",
+                LevelClass = "log-info"
+            });
+
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(25));
+            string response = await client.CompleteRawAsync(prompt, cts.Token);
+
+            if (!string.IsNullOrWhiteSpace(response))
+            {
+                // Clean any quotes or wrappers
+                string cleaned = response.Trim().Trim('"', '\'', '`', '\n', '\r');
+                if (cleaned.StartsWith("Location:", StringComparison.OrdinalIgnoreCase))
+                    cleaned = cleaned[9..].Trim();
+
+                if (!string.IsNullOrWhiteSpace(cleaned))
+                {
+                    _sceneLocationText = cleaned;
+                    PersistSceneFields();
+                    _outputLogs.Add(new LogEntryModel
+                    {
+                        Timestamp = DateTime.Now,
+                        Message = $"✨ AI Scene Location generated successfully ({genreName}).",
+                        LevelClass = "log-success"
+                    });
+                    return;
+                }
+            }
+
+            // Fallback to genre preset if empty response
+            ApplyGenrePreset();
+        }
+        catch (Exception ex)
+        {
+            _outputLogs.Add(new LogEntryModel
+            {
+                Timestamp = DateTime.Now,
+                Message = $"AI location generation notice: {ex.Message} — applied static preset.",
+                LevelClass = "log-warning"
+            });
+            ApplyGenrePreset();
+        }
+        finally
+        {
+            _isGeneratingLocation = false;
+            StateHasChanged();
+        }
+    }
+
     /// <summary>
     /// Genre + location text are the active scene: persisted to settings and host override.
     /// </summary>
@@ -407,7 +476,11 @@
         // Focus will be handled by the dropdown itself when user clicks
     }
 
-    private async Task SelectCharacter(string fileName)
+    /// <param name="autoPlay">
+    /// True only for explicit user selection from the dropdown.
+    /// Startup hydrate and catalog refresh must pass false to avoid re-entry / Play storms.
+    /// </param>
+    private async Task SelectCharacter(string fileName, bool autoPlay = false)
     {
         if (string.IsNullOrEmpty(fileName) ||
             fileName.StartsWith('(') ||
@@ -418,6 +491,13 @@
         {
             ClearCharacter();
             StateHasChanged();
+            return;
+        }
+
+        // Already on stage — do not re-save, re-log, or re-Play (prevents refresh feedback loops).
+        if (string.Equals(_selectedCharFile, fileName, StringComparison.Ordinal) && _isCharacterLoaded)
+        {
+            await Task.CompletedTask;
             return;
         }
 
@@ -453,7 +533,7 @@
 
             SimHost.SetStagedCharacter(fileName);
 
-            // Save the selected character to settings so it auto-loads next time
+            // Quiet persist so next startup restores selection without firing OnUIUpdated.
             SaveSelectedCharacter(fileName);
 
             _outputLogs.Add(new LogEntryModel
@@ -462,36 +542,41 @@
                 Message = $"Loaded character card: {info.Name} ({fileName})",
                 LevelClass = "log-success"
             });
-            _dialogueFeed.Add(new ChatMessageModel
+
+            if (autoPlay)
             {
-                SpeakerName = "System",
-                Dialogue = $"🎭 {info.Name} loaded onto the stage. Auto-play starting...",
-                IsSystem = true
-            });
-
-            // Auto-play the simulation when a character is loaded
-            SimHost.Play();
-
-            StateHasChanged();
-
-            // Load portrait
-            string cardId = CharacterCatalog.GetCardId(fileName);
-            string avatar = ResolveStoredPortraitUri(fileName, info.AvatarPath);
-            
-            if (!IsDisplayableAvatar(avatar))
-            {
-                // Try to get from SQLite
-                try
+                _dialogueFeed.Add(new ChatMessageModel
                 {
-                    string? dbUri = CharacterSimulator.Logic.Services.CharacterPortraitService.TryGetStoredDataUri(cardId);
-                    if (!string.IsNullOrEmpty(dbUri))
-                        _charAvatarPath = dbUri;
-                }
-                catch { }
+                    SpeakerName = "System",
+                    Dialogue = $"🎭 {info.Name} loaded onto the stage. Auto-play starting...",
+                    IsSystem = true
+                });
+                SimHost.Play();
             }
             else
             {
+                _dialogueFeed.Add(new ChatMessageModel
+                {
+                    SpeakerName = "System",
+                    Dialogue = $"🎭 {info.Name} loaded onto the stage. Press ▶ Play or send a line to start.",
+                    IsSystem = true
+                });
+            }
+
+            StateHasChanged();
+
+            // Load portrait from DB, disk cache, or auto-generate if missing
+            string cardId = CharacterCatalog.GetCardId(fileName);
+            string avatar = ResolveStoredPortraitUri(fileName, info.AvatarPath);
+
+            if (IsDisplayableAvatar(avatar))
+            {
                 _charAvatarPath = avatar;
+            }
+            else
+            {
+                _charAvatarPath = "";
+                _ = AutoEnsurePortraitAsync(cardId, info.Physical, info.Description);
             }
 
             StateHasChanged();
@@ -506,6 +591,8 @@
                 LevelClass = "log-error"
             });
         }
+
+        await Task.CompletedTask;
     }
 
     private string ResolveStoredPortraitUri(string fileName, string catalogAvatarPath)
@@ -530,8 +617,34 @@
         return "";
     }
 
+    private async Task AutoEnsurePortraitAsync(string cardId, string physical, string description)
+    {
+        if (string.IsNullOrWhiteSpace(cardId)) return;
+        try
+        {
+            string prompt = !string.IsNullOrWhiteSpace(physical) ? physical : description;
+            if (string.IsNullOrWhiteSpace(prompt))
+                prompt = "Character portrait";
+
+            string portraitUri = await CharacterSimulator.Logic.Services.CharacterPortraitService.EnsurePortraitAsync(
+                cardId, prompt, generateIfMissing: true);
+
+            if (!string.IsNullOrEmpty(portraitUri))
+            {
+                _charAvatarPath = portraitUri;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Index] Auto ensure portrait failed: {ex.Message}");
+        }
+    }
+
     private void ClearCharacter()
     {
+        bool wasLoaded = _isCharacterLoaded || !string.IsNullOrEmpty(_selectedCharFile);
+
         _selectedCharFile = "";
         _charName = "(No Character Selected)";
         _charAge = 0;
@@ -541,11 +654,19 @@
         _charGoals = new();
         _charSkills = new();
         SimHost.SetStagedCharacter("");
-        
-        // Clear the saved character selection
+
+        // Quiet clear — must not fire OnUIUpdated (would re-enter refresh → ClearCharacter).
         SaveSelectedCharacter("");
-        
-        _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = "Character removed from stage.", LevelClass = "log-info" });
+
+        if (wasLoaded)
+        {
+            _outputLogs.Add(new LogEntryModel
+            {
+                Timestamp = DateTime.Now,
+                Message = "Character removed from stage.",
+                LevelClass = "log-info"
+            });
+        }
         StateHasChanged();
     }
 
@@ -595,7 +716,7 @@
             _characterDropdownOptions.Add(new(card.FileName, card.DisplayName));
         }
 
-        // Prefer setup-selected card if the stage is empty
+        // Restore last card onto the stage without auto-play (user starts with Play / Send).
         var settings = ControlContext.CurrentSettings;
         if (settings != null)
         {
@@ -604,7 +725,7 @@
             if (!string.IsNullOrWhiteSpace(settings.SelectedCharA)
                 && !settings.SelectedCharA.StartsWith("None", StringComparison.OrdinalIgnoreCase))
             {
-                _ = SelectCharacter(settings.SelectedCharA);
+                _ = SelectCharacter(settings.SelectedCharA, autoPlay: false);
             }
         }
         else
@@ -766,14 +887,29 @@
                     _characterDropdownOptions.Add(new(card.FileName, card.DisplayName));
                 }
 
-                // Re-apply selection if it still exists
-                if (!string.IsNullOrWhiteSpace(_selectedCharFile) &&
-                    catalog.Any(c => c.FileName == _selectedCharFile))
+                // Prefer settings (setup may have changed SelectedCharA) then current stage.
+                string? desired = ControlContext.CurrentSettings?.SelectedCharA;
+                if (string.IsNullOrWhiteSpace(desired)
+                    || desired.StartsWith("None", StringComparison.OrdinalIgnoreCase))
                 {
-                    await SelectCharacter(_selectedCharFile);
+                    desired = _selectedCharFile;
                 }
-                else
+
+                bool desiredExists = !string.IsNullOrWhiteSpace(desired)
+                    && catalog.Any(c => c.FileName == desired);
+
+                if (desiredExists)
                 {
+                    // Only load when the staged file actually changed — never re-enter same card.
+                    if (!string.Equals(_selectedCharFile, desired, StringComparison.Ordinal)
+                        || !_isCharacterLoaded)
+                    {
+                        await SelectCharacter(desired!, autoPlay: false);
+                    }
+                }
+                else if (_isCharacterLoaded || !string.IsNullOrEmpty(_selectedCharFile))
+                {
+                    // Card removed from disk / none selected — clear stage quietly.
                     ClearCharacter();
                 }
 
@@ -852,10 +988,8 @@
     {
         try
         {
-            var settings = ControlContext.CurrentSettings ?? AppConfigService.LoadSettings();
-            settings.SelectedCharA = fileName;
-            AppConfigService.SaveSettings(settings);
-            ControlContext.UpdateSettings(settings);
+            // Quiet patch only — UpdateSettings would raise OnUIUpdated and re-enter load.
+            ControlContext.PatchSelectedCharacter(fileName);
         }
         catch (Exception ex)
         {

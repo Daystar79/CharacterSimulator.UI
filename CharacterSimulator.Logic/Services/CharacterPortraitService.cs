@@ -37,20 +37,65 @@ public static class CharacterPortraitService
 
     public static bool HasPortrait(string cardId)
     {
+        if (string.IsNullOrWhiteSpace(cardId)) return false;
+        if (TryGetStoredDataUri(cardId) != null) return true;
         CharacterPortraitRepository? repo;
         lock (BindLock) repo = _portraits;
-        return repo != null && !string.IsNullOrWhiteSpace(cardId) && repo.Exists(cardId);
+        return repo != null && repo.Exists(cardId);
     }
 
     /// <summary>
-    /// Resolve display URI for a card: DB BLOB → data URI; else null if missing.
+    /// Resolve display URI for a card: DB BLOB → data URI; else disk cache file → auto-import to DB; else null.
     /// </summary>
     public static string? TryGetStoredDataUri(string cardId)
     {
+        if (string.IsNullOrWhiteSpace(cardId)) return null;
+
         CharacterPortraitRepository? repo;
         lock (BindLock) repo = _portraits;
-        if (repo == null || string.IsNullOrWhiteSpace(cardId)) return null;
-        return repo.GetDataUri(cardId);
+
+        if (repo != null)
+        {
+            string? uri = repo.GetDataUri(cardId);
+            if (!string.IsNullOrEmpty(uri))
+                return uri;
+        }
+
+        // Check cache files under Assets/Portraits or Characters/
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string charDir = CharacterCatalog.ResolveCharactersDirectory();
+        string[] candidates = new[]
+        {
+            System.IO.Path.Combine(baseDir, "Assets", "Portraits", cardId + ".jpg"),
+            System.IO.Path.Combine(baseDir, "Assets", "Portraits", cardId + ".png"),
+            System.IO.Path.Combine(baseDir, "Assets", "Portraits", cardId + ".jpeg"),
+            System.IO.Path.Combine(charDir, cardId + ".jpg"),
+            System.IO.Path.Combine(charDir, cardId + ".png"),
+            System.IO.Path.Combine(charDir, cardId + ".jpeg")
+        };
+
+        foreach (var file in candidates)
+        {
+            if (System.IO.File.Exists(file))
+            {
+                try
+                {
+                    byte[] bytes = System.IO.File.ReadAllBytes(file);
+                    string mime = file.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+                    if (repo != null)
+                    {
+                        return SavePortrait(cardId, bytes, mime);
+                    }
+                    else
+                    {
+                        return $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+                    }
+                }
+                catch { }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -99,7 +144,7 @@ public static class CharacterPortraitService
     }
 
     /// <summary>
-    /// On character load: if portrait in SQLite, return it; otherwise generate, store, return.
+    /// On character load: if portrait in SQLite or disk cache, return it; otherwise generate, store, return.
     /// Returns empty string if generation fails or cardId invalid.
     /// </summary>
     public static async Task<string> EnsurePortraitAsync(
@@ -113,16 +158,16 @@ public static class CharacterPortraitService
         if (string.IsNullOrWhiteSpace(cardId))
             return "";
 
+        // Fast path: already in DB or disk cache
+        string? existing = TryGetStoredDataUri(cardId);
+        if (!string.IsNullOrEmpty(existing))
+            return existing;
+
+        if (!generateIfMissing)
+            return "";
+
         CharacterPortraitRepository? repo;
         lock (BindLock) repo = _portraits;
-
-        // Fast path: already in DB
-        if (repo != null)
-        {
-            string? existing = repo.GetDataUri(cardId);
-            if (!string.IsNullOrEmpty(existing))
-                return existing;
-        }
 
         if (!generateIfMissing)
             return "";
@@ -134,9 +179,9 @@ public static class CharacterPortraitService
             // Re-check after lock (another load may have finished)
             if (repo != null)
             {
-                string? existing = repo.GetDataUri(cardId);
-                if (!string.IsNullOrEmpty(existing))
-                    return existing;
+                string? stored = repo.GetDataUri(cardId);
+                if (!string.IsNullOrEmpty(stored))
+                    return stored;
             }
 
             string? artStyleId = null;

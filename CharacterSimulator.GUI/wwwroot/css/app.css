@@ -584,6 +584,111 @@ body, html {
     gap: 0.3rem;
 }
 
+.ai-status-window {
+    background: #0f172a;
+    border: 1px solid var(--accent-green);
+    color: var(--accent-green);
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+}
+
+.ai-status-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* THINKING / PROCESSING TOAST POPUP OVERLAY */
+.thinking-toast-popup {
+    position: fixed;
+    top: 44px;
+    right: 20px;
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid var(--accent-purple);
+    box-shadow: 0 8px 32px rgba(192, 132, 252, 0.3), 0 4px 16px rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 3500;
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+    animation: fadeInSlide 0.25s ease-out;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.thinking-spinner {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.thinking-glow-dot {
+    width: 12px;
+    height: 12px;
+    background: var(--accent-purple);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--accent-purple);
+    animation: pulseGlow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+    from {
+        transform: scale(0.75);
+        opacity: 0.5;
+        box-shadow: 0 0 4px var(--accent-purple);
+    }
+    to {
+        transform: scale(1.25);
+        opacity: 1;
+        box-shadow: 0 0 16px var(--accent-purple), 0 0 24px var(--accent-blue);
+    }
+}
+
+.thinking-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.thinking-title {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--accent-purple);
+    text-transform: uppercase;
+}
+
+.thinking-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 /* MODAL OVERLAY */
 .modal-overlay {
     position: fixed;
@@ -718,6 +823,8 @@ body, html {
     padding: 0.5rem;
     color: #f8fafc !important;
     font-size: 0.8rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .form-control option, select.form-control option {

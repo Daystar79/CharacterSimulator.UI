@@ -17,36 +17,42 @@ public class ProfileRepository
 
     public List<UserProfile> GetAllProfiles()
     {
-        var list = new List<UserProfile>();
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at, recovery_code
-            FROM profiles
-            ORDER BY last_opened_at DESC;";
-
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        lock (_conn)
         {
-            list.Add(ReadProfile(reader));
+            var list = new List<UserProfile>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at, recovery_code
+                FROM profiles
+                ORDER BY last_opened_at DESC;";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(ReadProfile(reader));
+            }
+            return list;
         }
-        return list;
     }
 
     public UserProfile? GetById(string profileId)
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at, recovery_code
-            FROM profiles
-            WHERE id = @id LIMIT 1;";
-        cmd.Parameters.AddWithValue("@id", profileId);
-
-        using var reader = cmd.ExecuteReader();
-        if (reader.Read())
+        lock (_conn)
         {
-            return ReadProfile(reader);
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, is_adult_attested, created_at, last_opened_at, recovery_code
+                FROM profiles
+                WHERE id = @id LIMIT 1;";
+            cmd.Parameters.AddWithValue("@id", profileId);
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return ReadProfile(reader);
+            }
+            return null;
         }
-        return null;
     }
 
     public UserProfile CreateProfile(string displayName, int dobYear, int dobMonth, int dobDay, string? pin = null, bool adultAttested = false)
@@ -76,22 +82,25 @@ public class ProfileRepository
             LastOpenedAt = DateTime.UtcNow
         };
 
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
-            INSERT INTO profiles (id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, recovery_code, is_adult_attested, created_at, last_opened_at)
-            VALUES (@id, @name, @year, @month, @day, @hash, @salt, @rec, @adult, @created, @opened);";
-        cmd.Parameters.AddWithValue("@id", profile.Id);
-        cmd.Parameters.AddWithValue("@name", profile.DisplayName);
-        cmd.Parameters.AddWithValue("@year", profile.DobYear);
-        cmd.Parameters.AddWithValue("@month", profile.DobMonth);
-        cmd.Parameters.AddWithValue("@day", profile.DobDay);
-        cmd.Parameters.AddWithValue("@hash", (object?)profile.PinHash ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@salt", (object?)profile.PinSalt ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@rec", profile.RecoveryCode);
-        cmd.Parameters.AddWithValue("@adult", profile.IsAdultAttested ? 1 : 0);
-        cmd.Parameters.AddWithValue("@created", profile.CreatedAt.ToString("o"));
-        cmd.Parameters.AddWithValue("@opened", profile.LastOpenedAt.ToString("o"));
-        cmd.ExecuteNonQuery();
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO profiles (id, display_name, dob_year, dob_month, dob_day, pin_hash, pin_salt, recovery_code, is_adult_attested, created_at, last_opened_at)
+                VALUES (@id, @name, @year, @month, @day, @hash, @salt, @rec, @adult, @created, @opened);";
+            cmd.Parameters.AddWithValue("@id", profile.Id);
+            cmd.Parameters.AddWithValue("@name", profile.DisplayName);
+            cmd.Parameters.AddWithValue("@year", profile.DobYear);
+            cmd.Parameters.AddWithValue("@month", profile.DobMonth);
+            cmd.Parameters.AddWithValue("@day", profile.DobDay);
+            cmd.Parameters.AddWithValue("@hash", (object?)profile.PinHash ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@salt", (object?)profile.PinSalt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@rec", profile.RecoveryCode);
+            cmd.Parameters.AddWithValue("@adult", profile.IsAdultAttested ? 1 : 0);
+            cmd.Parameters.AddWithValue("@created", profile.CreatedAt.ToString("o"));
+            cmd.Parameters.AddWithValue("@opened", profile.LastOpenedAt.ToString("o"));
+            cmd.ExecuteNonQuery();
+        }
 
         return profile;
     }
@@ -111,12 +120,15 @@ public class ProfileRepository
             newHash = HashPin(newPin, newSalt);
         }
 
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "UPDATE profiles SET pin_hash = @hash, pin_salt = @salt WHERE id = @id;";
-        cmd.Parameters.AddWithValue("@hash", (object?)newHash ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@salt", (object?)newSalt ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@id", profileId);
-        return cmd.ExecuteNonQuery() > 0;
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE profiles SET pin_hash = @hash, pin_salt = @salt WHERE id = @id;";
+            cmd.Parameters.AddWithValue("@hash", (object?)newHash ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@salt", (object?)newSalt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", profileId);
+            return cmd.ExecuteNonQuery() > 0;
+        }
     }
 
     public bool ResetPinWithRecoveryCode(string profileId, string recoveryCode, string? newPin)
@@ -135,12 +147,15 @@ public class ProfileRepository
             newHash = HashPin(newPin, newSalt);
         }
 
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "UPDATE profiles SET pin_hash = @hash, pin_salt = @salt WHERE id = @id;";
-        cmd.Parameters.AddWithValue("@hash", (object?)newHash ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@salt", (object?)newSalt ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@id", profileId);
-        return cmd.ExecuteNonQuery() > 0;
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE profiles SET pin_hash = @hash, pin_salt = @salt WHERE id = @id;";
+            cmd.Parameters.AddWithValue("@hash", (object?)newHash ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@salt", (object?)newSalt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", profileId);
+            return cmd.ExecuteNonQuery() > 0;
+        }
     }
 
     public bool VerifyPin(UserProfile profile, string pin)
@@ -148,26 +163,36 @@ public class ProfileRepository
         if (string.IsNullOrEmpty(profile.PinHash) || string.IsNullOrEmpty(profile.PinSalt))
             return true; // No PIN required for this profile
 
+        if (pin == null) return false;
+
         string hash = HashPin(pin, profile.PinSalt);
-        return string.Equals(profile.PinHash, hash, StringComparison.Ordinal);
+        byte[] hashBytes = Encoding.UTF8.GetBytes(hash);
+        byte[] expectedBytes = Encoding.UTF8.GetBytes(profile.PinHash);
+        return hashBytes.Length == expectedBytes.Length && CryptographicOperations.FixedTimeEquals(hashBytes, expectedBytes);
     }
 
     public void TouchLastOpened(string profileId)
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "UPDATE profiles SET last_opened_at = @now WHERE id = @id;";
-        cmd.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString("o"));
-        cmd.Parameters.AddWithValue("@id", profileId);
-        cmd.ExecuteNonQuery();
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE profiles SET last_opened_at = @now WHERE id = @id;";
+            cmd.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString("o"));
+            cmd.Parameters.AddWithValue("@id", profileId);
+            cmd.ExecuteNonQuery();
+        }
     }
 
     public void SetAdultAttestation(string profileId, bool attested)
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "UPDATE profiles SET is_adult_attested = @attested WHERE id = @id;";
-        cmd.Parameters.AddWithValue("@attested", attested ? 1 : 0);
-        cmd.Parameters.AddWithValue("@id", profileId);
-        cmd.ExecuteNonQuery();
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE profiles SET is_adult_attested = @attested WHERE id = @id;";
+            cmd.Parameters.AddWithValue("@attested", attested ? 1 : 0);
+            cmd.Parameters.AddWithValue("@id", profileId);
+            cmd.ExecuteNonQuery();
+        }
     }
 
     private static UserProfile ReadProfile(SqliteDataReader reader)
@@ -213,10 +238,13 @@ public class ProfileRepository
 
     public bool DeleteProfile(string profileId)
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM profiles WHERE id = @id;";
-        cmd.Parameters.AddWithValue("@id", profileId);
-        int rows = cmd.ExecuteNonQuery();
-        return rows > 0;
+        lock (_conn)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM profiles WHERE id = @id;";
+            cmd.Parameters.AddWithValue("@id", profileId);
+            int rows = cmd.ExecuteNonQuery();
+            return rows > 0;
+        }
     }
 }
