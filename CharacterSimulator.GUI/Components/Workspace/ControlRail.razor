@@ -1,0 +1,190 @@
+@* Right rail: character identity + scene controls *@
+
+<div class="character-panel character-panel-right control-rail">
+    <div class="panel-tabs-header">
+        <button class="panel-tab-btn active" type="button">
+            👤 @(IsCharacterLoaded ? CharName : "Character & scene")
+        </button>
+    </div>
+
+    <div class="char-stack">
+        <div class="char-selector-card">
+            <label class="form-label form-label-accent">📂 Character</label>
+            <div class="char-selector-row">
+                <div class="u-flex-1">
+                    <CustomSelect Value="@SelectedCharFile" ValueChanged="OnCharacterSelected" Options="CharacterOptions" />
+                </div>
+                @if (IsCharacterLoaded)
+                {
+                    <button class="btn btn-secondary btn-sm" @onclick="HandleClearCharacter">✕ Clear</button>
+                }
+            </div>
+        </div>
+
+        <div class="char-fields char-fields-tabs control-char-fields">
+            <div class="panel-tabs-header char-detail-tabs" role="tablist">
+                <button type="button" role="tab"
+                        class="panel-tab-btn char-detail-tab @(DetailTab == "Personality" ? "active" : "") char-detail-tab-personality"
+                        aria-selected="@(DetailTab == "Personality")"
+                        disabled="@(!IsCharacterLoaded)"
+                        @onclick='() => SetDetailTab("Personality")'>
+                    Personality
+                </button>
+                <button type="button" role="tab"
+                        class="panel-tab-btn char-detail-tab @(DetailTab == "Behavior" ? "active" : "") char-detail-tab-behavior"
+                        aria-selected="@(DetailTab == "Behavior")"
+                        disabled="@(!IsCharacterLoaded)"
+                        @onclick='() => SetDetailTab("Behavior")'>
+                    Behavior
+                </button>
+                <button type="button" role="tab"
+                        class="panel-tab-btn char-detail-tab @(DetailTab == "Physical" ? "active" : "") char-detail-tab-physical"
+                        aria-selected="@(DetailTab == "Physical")"
+                        disabled="@(!IsCharacterLoaded)"
+                        @onclick='() => SetDetailTab("Physical")'>
+                    Physical
+                </button>
+                <button type="button" role="tab"
+                        class="panel-tab-btn char-detail-tab @(DetailTab == "Style" ? "active" : "") char-detail-tab-style"
+                        aria-selected="@(DetailTab == "Style")"
+                        disabled="@(!IsCharacterLoaded)"
+                        @onclick='() => SetDetailTab("Style")'>
+                    Style
+                </button>
+            </div>
+
+            <div class="char-field char-field-active" role="tabpanel">
+                @if (!IsCharacterLoaded)
+                {
+                    <div class="control-empty-hint">
+                        Select a character to edit personality, behavior, physical appearance, and style.
+                    </div>
+                }
+                else if (DetailTab == "Personality")
+                {
+                    <textarea class="char-field-input"
+                              value="@Personality"
+                              @oninput="OnPersonalityInput"
+                              placeholder="Who they are — temperament, values, social stance (not body)..."
+                              title="Personality: who they are"></textarea>
+                }
+                else if (DetailTab == "Behavior")
+                {
+                    <textarea class="char-field-input"
+                              value="@Behavior"
+                              @oninput="OnBehaviorInput"
+                              placeholder="How they act under pressure, trust, and routine (not appearance)..."
+                              title="Behavior: how they act"></textarea>
+                }
+                else if (DetailTab == "Physical")
+                {
+                    <textarea class="char-field-input"
+                              value="@Physical"
+                              @oninput="OnPhysicalInput"
+                              placeholder="Body only — height, build, hair, eyes, skin, face, marks, movement..."
+                              title="Physical appearance (body only)"></textarea>
+                }
+                else
+                {
+                    <textarea class="char-field-input"
+                              value="@Style"
+                              @oninput="OnStyleInput"
+                              placeholder="How they dress — outfits, accessories, palette, signature items..."
+                              title="Style & accessories: default wardrobe"></textarea>
+                }
+            </div>
+        </div>
+
+        <div class="scene-controls control-scene-block">
+            <div class="scene-genre-bar">
+                <label class="scene-genre-label">Genre</label>
+                <CustomSelect Value="@SelectedGenre" ValueChanged="OnGenreChanged" Options="GenreOptions" class="scene-genre-select" />
+            </div>
+
+            <div class="scene-field scene-field-location">
+                <div class="section-title section-title-location">
+                    <span>📍</span>
+                    <span>Location &amp; atmosphere</span>
+                </div>
+                <textarea class="form-control scene-location-input"
+                          value="@SceneLocationText"
+                          @oninput="OnLocationInput"
+                          @onfocusout="HandleLocationBlur"
+                          placeholder="Place, time of day, weather, sensory detail… active scene for roleplay and scene art."
+                          title="Saved to settings. Used when you Play / Send and for Generate Scene Artwork."></textarea>
+                <div class="scene-location-actions">
+                    <button type="button" class="btn btn-primary btn-block btn-sm"
+                            disabled="@IsGeneratingLocation"
+                            @onclick="HandleGenerateAiLocation"
+                            title="Use AI to generate a vivid location for this genre">
+                        @(IsGeneratingLocation ? "✨ Generating..." : "✨ Generate AI Location")
+                    </button>
+                    <div class="scene-location-actions-row">
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="HandleApplyGenrePreset" title="Fill with genre default place">
+                            ⇢ Preset
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="HandlePersistScene" title="Save genre + location">
+                            💾 Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsCharacterLoaded { get; set; }
+    [Parameter] public string CharName { get; set; } = "";
+    [Parameter] public string SelectedCharFile { get; set; } = "";
+    [Parameter] public List<CustomSelect.DropdownOption> CharacterOptions { get; set; } = new();
+    [Parameter] public EventCallback<string> OnCharacterSelected { get; set; }
+    [Parameter] public EventCallback OnClearCharacter { get; set; }
+
+    [Parameter] public string DetailTab { get; set; } = "Personality";
+    [Parameter] public EventCallback<string> DetailTabChanged { get; set; }
+
+    [Parameter] public string Personality { get; set; } = "";
+    [Parameter] public EventCallback<string> PersonalityChanged { get; set; }
+    [Parameter] public string Behavior { get; set; } = "";
+    [Parameter] public EventCallback<string> BehaviorChanged { get; set; }
+    [Parameter] public string Physical { get; set; } = "";
+    [Parameter] public EventCallback<string> PhysicalChanged { get; set; }
+    [Parameter] public string Style { get; set; } = "";
+    [Parameter] public EventCallback<string> StyleChanged { get; set; }
+
+    [Parameter] public string SelectedGenre { get; set; } = "";
+    [Parameter] public List<CustomSelect.DropdownOption> GenreOptions { get; set; } = new();
+    [Parameter] public EventCallback<string> OnGenreChanged { get; set; }
+
+    [Parameter] public string SceneLocationText { get; set; } = "";
+    [Parameter] public EventCallback<string> SceneLocationTextChanged { get; set; }
+    [Parameter] public EventCallback OnLocationBlur { get; set; }
+    [Parameter] public bool IsGeneratingLocation { get; set; }
+    [Parameter] public EventCallback OnGenerateAiLocation { get; set; }
+    [Parameter] public EventCallback OnApplyGenrePreset { get; set; }
+    [Parameter] public EventCallback OnPersistScene { get; set; }
+
+    private Task SetDetailTab(string tab) => DetailTabChanged.InvokeAsync(tab);
+
+    private Task OnPersonalityInput(ChangeEventArgs e) =>
+        PersonalityChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+    private Task OnBehaviorInput(ChangeEventArgs e) =>
+        BehaviorChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+    private Task OnPhysicalInput(ChangeEventArgs e) =>
+        PhysicalChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+    private Task OnStyleInput(ChangeEventArgs e) =>
+        StyleChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+    private Task OnLocationInput(ChangeEventArgs e) =>
+        SceneLocationTextChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+    private Task HandleClearCharacter() => OnClearCharacter.InvokeAsync();
+    private Task HandleLocationBlur() => OnLocationBlur.InvokeAsync();
+    private Task HandleGenerateAiLocation() => OnGenerateAiLocation.InvokeAsync();
+    private Task HandleApplyGenrePreset() => OnApplyGenrePreset.InvokeAsync();
+    private Task HandlePersistScene() => OnPersistScene.InvokeAsync();
+}

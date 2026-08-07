@@ -3,301 +3,59 @@
 @inject TurnControlContext ControlContext
 @inject SimulationHost SimHost
 @inject IJSRuntime JS
+@implements IDisposable
 
 <div class="workspace-grid">
+    <ImageRail
+        SceneImagePath="@_sceneImagePath"
+        GenreDisplayName="@SceneGenreCatalog.GetById(_selectedGenre).DisplayName"
+        SceneLocationText="@_sceneLocationText"
+        IsGeneratingScene="@_isGeneratingScene"
+        IsCharacterLoaded="@_isCharacterLoaded"
+        CharName="@_charName"
+        CharAge="@_charAge"
+        CharAvatarPath="@_charAvatarPath"
+        OnGenerateScene="GenerateSceneArtwork"
+        OnGeneratePortrait="OpenPortraitFromRail" />
 
-    <!-- LEFT: images only — stage (scene) + portrait -->
-    <div class="character-panel character-panel-left image-rail">
-        <div class="image-block">
-            <div class="image-block-label">Scene</div>
-            <div class="scene-stage">
-                @if (!string.IsNullOrEmpty(_sceneImagePath) && (System.IO.File.Exists(_sceneImagePath) || _sceneImagePath.StartsWith("http") || _sceneImagePath.StartsWith("data:")))
-                {
-                    <img class="scene-stage-img" src="@_sceneImagePath" alt="Scene Location" />
-                }
-                else
-                {
-                    <div class="scene-stage-fallback">
-                        <div class="canvas-avatar-icon">🏙️</div>
-                        <div class="canvas-char-name">@SceneGenreCatalog.GetById(_selectedGenre).DisplayName</div>
-                        <div class="canvas-bio">
-                            @(string.IsNullOrWhiteSpace(_sceneLocationText)
-                                ? "Set location on the right, then generate scene art."
-                                : (_sceneLocationText.Length > 100 ? _sceneLocationText[..97] + "…" : _sceneLocationText))
-                        </div>
-                    </div>
-                }
-            </div>
-            <button class="btn btn-secondary scene-generate-btn" disabled="@_isGeneratingScene" @onclick="GenerateSceneArtwork">
-                @(_isGeneratingScene ? "✨ Rendering Scene..." : "✨ Generate Scene Artwork")
-            </button>
-        </div>
+    <DialoguePanel
+        CenterTab="@_centerTab"
+        CenterTabChanged="SwitchCenterTab"
+        DialogueFeed="@_dialogueFeed"
+        OutputLogs="@_outputLogs"
+        PlayerInput="@_playerInput"
+        PlayerInputChanged="v => _playerInput = v"
+        OnSend="SendPlayerInput"
+        OnClearLogs="ClearLogs"
+        OnPlayerKeyUp="OnPlayerInputKeyUp" />
 
-        <div class="image-block">
-            <div class="image-block-label">Character</div>
-            <div class="char-portrait-frame image-rail-portrait">
-                @if (_isCharacterLoaded && !string.IsNullOrEmpty(_charAvatarPath) && (System.IO.File.Exists(_charAvatarPath) || _charAvatarPath.StartsWith("http") || _charAvatarPath.StartsWith("data:")))
-                {
-                    <img class="char-portrait-img" src="@_charAvatarPath" alt="@_charName" />
-                }
-                else if (_isCharacterLoaded)
-                {
-                    <div class="scene-stage-fallback">
-                        <div class="canvas-avatar-icon">👤</div>
-                        <div class="canvas-char-name">@_charName @(_charAge > 0 ? $"({_charAge})" : "")</div>
-                        <div class="canvas-bio">Generate a portrait from Physical + Style on the right.</div>
-                    </div>
-                }
-                else
-                {
-                    <div class="scene-stage-fallback">
-                        <div class="canvas-avatar-icon">👤</div>
-                        <div class="canvas-char-name">No character</div>
-                        <div class="canvas-bio">Select a character on the right.</div>
-                    </div>
-                }
-            </div>
-            <button class="btn btn-secondary scene-generate-btn char-portrait-generate-btn"
-                    disabled="@(!_isCharacterLoaded)"
-                    @onclick="() => OpenGeneratePortraitModal(BuildPortraitAppearance(), _selectedCharFile)">
-                ✨ Generate Portrait
-            </button>
-        </div>
-    </div>
-
-    <!-- CENTER: dialogue -->
-    <div class="feed-panel">
-        <div class="panel-tabs-header">
-            <button class="panel-tab-btn @(_centerTab == "Dialogue" ? "active" : "")" @onclick='() => SwitchCenterTab("Dialogue")'>
-                💬 Dialogue
-            </button>
-            <button class="panel-tab-btn @(_centerTab == "System" ? "active" : "")" @onclick='() => SwitchCenterTab("System")'>
-                ⚙️ System
-            </button>
-            <button class="panel-tab-btn @(_centerTab == "History" ? "active" : "")" @onclick='() => SwitchCenterTab("History")'>
-                📜 History
-            </button>
-        </div>
-
-        @if (_centerTab == "Dialogue")
-        {
-            <div class="feed-messages" id="dialogueFeed">
-                @if (_dialogueFeed.Count == 0)
-                {
-                    <div class="chat-bubble chat-system">
-                        <div class="dialogue-text">
-                            Load a character on the right to auto-start, or restore last card then press ▶ Play.
-                            Slash commands: /help /play /pause /step /stop /scene /clear /adult on
-                        </div>
-                    </div>
-                }
-                @foreach (var msg in _dialogueFeed)
-                {
-                    <div class="chat-bubble @(msg.IsSystem ? "chat-system" : (msg.IsLeft ? "chat-left" : "chat-right"))">
-                        @if (!msg.IsSystem)
-                        {
-                            <div class="chat-header">
-                                <span class="speaker-name" style="@(string.IsNullOrEmpty(msg.SpeakerColor) ? null : $"color:{msg.SpeakerColor}")">@msg.SpeakerName @(string.IsNullOrEmpty(msg.TargetName) ? "" : "➔ " + msg.TargetName)</span>
-                                <span>@msg.SpeakerEmotionEmoji</span>
-                            </div>
-                            @if (!string.IsNullOrEmpty(msg.SomaticText))
-                            {
-                                <div class="somatic-tag" title="Somatic / body reaction">
-                                    <span class="somatic-label">Somatic</span>
-                                    <span class="somatic-body">@msg.SomaticText</span>
-                                </div>
-                            }
-                        }
-                        <div class="dialogue-text">@msg.Dialogue</div>
-                    </div>
-                }
-            </div>
-
-            <div class="player-input-bar">
-                <input class="input-box" placeholder="Type prompt or command (e.g. /step, /adult)..." @bind="_playerInput" @bind:event="oninput" @onkeyup="OnPlayerInputKeyUp" />
-                <button class="btn btn-primary" @onclick="SendPlayerInput">Send ➔</button>
-            </div>
-        }
-        else if (_centerTab == "System")
-        {
-            <div class="panel-toolbar">
-                <span class="section-title section-title-accent">⚙️ System diagnostics &amp; log</span>
-                <button class="btn btn-secondary btn-sm" @onclick="ClearLogs">Clear</button>
-            </div>
-            <div class="output-log-container" id="outputLogBox">
-                @foreach (var entry in _outputLogs)
-                {
-                    <div class="log-entry @entry.LevelClass">
-                        <span class="log-time">[@entry.Timestamp.ToString("HH:mm:ss")]</span>
-                        <span class="log-message">@entry.Message</span>
-                    </div>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="panel-toolbar">
-                <span class="section-title">📜 Turn history</span>
-                <span class="panel-toolbar-meta">Total turns: @_dialogueFeed.Count</span>
-            </div>
-            <div class="output-log-container" id="historyLogBox">
-                @for (int i = 0; i < _dialogueFeed.Count; i++)
-                {
-                    var turn = _dialogueFeed[i];
-                    <div class="history-turn">
-                        <div class="history-turn-title" style="@(string.IsNullOrEmpty(turn.SpeakerColor) ? null : $"color:{turn.SpeakerColor}")">
-                            Turn #@(i + 1): @turn.SpeakerName @(turn.IsSystem ? "" : "➔ " + turn.TargetName)
-                        </div>
-                        @if (!string.IsNullOrEmpty(turn.SomaticText))
-                        {
-                            <div class="somatic-tag">
-                                <span class="somatic-label">Somatic</span>
-                                <span class="somatic-body">@turn.SomaticText</span>
-                            </div>
-                        }
-                        <div class="history-turn-body">@turn.Dialogue</div>
-                    </div>
-                }
-            </div>
-        }
-    </div>
-
-    <!-- RIGHT: character + scene controls -->
-    <div class="character-panel character-panel-right control-rail">
-        <div class="panel-tabs-header">
-            <button class="panel-tab-btn active" type="button">
-                👤 @(_isCharacterLoaded ? _charName : "Character & scene")
-            </button>
-        </div>
-
-        <div class="char-stack">
-            <div class="char-selector-card">
-                <label class="form-label form-label-accent">📂 Character</label>
-                <div class="char-selector-row">
-                    <div class="u-flex-1">
-                        <CustomSelect Value="@_selectedCharFile" ValueChanged='(val => SelectCharacter(val, autoPlay: true))' Options="_characterDropdownOptions" />
-                    </div>
-                    @if (_isCharacterLoaded)
-                    {
-                        <button class="btn btn-secondary btn-sm" @onclick="ClearCharacter">✕ Clear</button>
-                    }
-                </div>
-            </div>
-
-            <div class="char-fields char-fields-tabs control-char-fields">
-                <div class="panel-tabs-header char-detail-tabs" role="tablist">
-                    <button type="button" role="tab"
-                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Personality" ? "active" : "") char-detail-tab-personality"
-                            aria-selected="@(_charDetailTab == "Personality")"
-                            disabled="@(!_isCharacterLoaded)"
-                            @onclick='() => _charDetailTab = "Personality"'>
-                        Personality
-                    </button>
-                    <button type="button" role="tab"
-                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Behavior" ? "active" : "") char-detail-tab-behavior"
-                            aria-selected="@(_charDetailTab == "Behavior")"
-                            disabled="@(!_isCharacterLoaded)"
-                            @onclick='() => _charDetailTab = "Behavior"'>
-                        Behavior
-                    </button>
-                    <button type="button" role="tab"
-                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Physical" ? "active" : "") char-detail-tab-physical"
-                            aria-selected="@(_charDetailTab == "Physical")"
-                            disabled="@(!_isCharacterLoaded)"
-                            @onclick='() => _charDetailTab = "Physical"'>
-                        Physical
-                    </button>
-                    <button type="button" role="tab"
-                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Style" ? "active" : "") char-detail-tab-style"
-                            aria-selected="@(_charDetailTab == "Style")"
-                            disabled="@(!_isCharacterLoaded)"
-                            @onclick='() => _charDetailTab = "Style"'>
-                        Style
-                    </button>
-                </div>
-
-                <div class="char-field char-field-active" role="tabpanel">
-                    @if (!_isCharacterLoaded)
-                    {
-                        <div class="control-empty-hint">
-                            Select a character to edit personality, behavior, physical appearance, and style.
-                        </div>
-                    }
-                    else if (_charDetailTab == "Personality")
-                    {
-                        <textarea
-                            class="char-field-input"
-                            @bind="_charPersonality"
-                            @bind:event="oninput"
-                            placeholder="Who they are — temperament, values, social stance (not body)..."
-                            title="Personality: who they are"></textarea>
-                    }
-                    else if (_charDetailTab == "Behavior")
-                    {
-                        <textarea
-                            class="char-field-input"
-                            @bind="_charBehavior"
-                            @bind:event="oninput"
-                            placeholder="How they act under pressure, trust, and routine (not appearance)..."
-                            title="Behavior: how they act"></textarea>
-                    }
-                    else if (_charDetailTab == "Physical")
-                    {
-                        <textarea
-                            class="char-field-input"
-                            @bind="_charPhysical"
-                            @bind:event="oninput"
-                            placeholder="Body only — height, build, hair, eyes, skin, face, marks, movement..."
-                            title="Physical appearance (body only)"></textarea>
-                    }
-                    else
-                    {
-                        <textarea
-                            class="char-field-input"
-                            @bind="_charStyle"
-                            @bind:event="oninput"
-                            placeholder="How they dress — outfits, accessories, palette, signature items..."
-                            title="Style & accessories: default wardrobe"></textarea>
-                    }
-                </div>
-            </div>
-
-            <div class="scene-controls control-scene-block">
-                <div class="scene-genre-bar">
-                    <label class="scene-genre-label">Genre</label>
-                    <CustomSelect Value="@_selectedGenre" ValueChanged="OnGenreChanged" Options="_genreOptions" class="scene-genre-select" />
-                </div>
-
-                <div class="scene-field scene-field-location">
-                    <div class="section-title section-title-location">
-                        <span>📍</span>
-                        <span>Location &amp; atmosphere</span>
-                    </div>
-                    <textarea
-                        class="form-control scene-location-input"
-                        @bind="_sceneLocationText"
-                        @bind:event="oninput"
-                        @onfocusout="PersistSceneFields"
-                        placeholder="Place, time of day, weather, sensory detail… active scene for roleplay and scene art."
-                        title="Saved to settings. Used when you Play / Send and for Generate Scene Artwork."></textarea>
-                    <div class="scene-location-actions">
-                        <button type="button" class="btn btn-primary btn-block btn-sm" disabled="@_isGeneratingLocation" @onclick="GenerateAiLocationAsync" title="Use AI to generate a vivid location for this genre">
-                            @(_isGeneratingLocation ? "✨ Generating..." : "✨ Generate AI Location")
-                        </button>
-                        <div class="scene-location-actions-row">
-                            <button type="button" class="btn btn-secondary btn-sm" @onclick="ApplyGenrePreset" title="Fill with genre default place">
-                                ⇢ Preset
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-sm" @onclick="PersistSceneFields" title="Save genre + location">
-                                💾 Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <ControlRail
+        IsCharacterLoaded="@_isCharacterLoaded"
+        CharName="@_charName"
+        SelectedCharFile="@_selectedCharFile"
+        CharacterOptions="@_characterDropdownOptions"
+        OnCharacterSelected="file => SelectCharacter(file, autoPlay: true)"
+        OnClearCharacter="ClearCharacter"
+        DetailTab="@_charDetailTab"
+        DetailTabChanged="v => _charDetailTab = v"
+        Personality="@_charPersonality"
+        PersonalityChanged="v => _charPersonality = v"
+        Behavior="@_charBehavior"
+        BehaviorChanged="v => _charBehavior = v"
+        Physical="@_charPhysical"
+        PhysicalChanged="v => _charPhysical = v"
+        Style="@_charStyle"
+        StyleChanged="v => _charStyle = v"
+        SelectedGenre="@_selectedGenre"
+        GenreOptions="@_genreOptions"
+        OnGenreChanged="OnGenreChanged"
+        SceneLocationText="@_sceneLocationText"
+        SceneLocationTextChanged="v => _sceneLocationText = v"
+        OnLocationBlur="PersistSceneFields"
+        IsGeneratingLocation="@_isGeneratingLocation"
+        OnGenerateAiLocation="GenerateAiLocationAsync"
+        OnApplyGenrePreset="ApplyGenrePreset"
+        OnPersistScene="PersistSceneFields" />
 </div>
 
 @if (_showGeneratePortraitModal)
@@ -305,43 +63,105 @@
     <GeneratePortraitModal SlotName="Character" CharacterAppearance="@_portraitAppearance" CardFileName="@_portraitCardFile" OnPortraitGenerated="OnPortraitGenerated" />
 }
 
-@implements IDisposable
-
 @code {
     private string _centerTab = "Dialogue";
-    /// <summary>Active identity field tab: Personality | Behavior | Physical | Style</summary>
     private string _charDetailTab = "Personality";
-    private bool _showGeneratePortraitModal = false;
+    private bool _showGeneratePortraitModal;
     private string _portraitAppearance = "";
     private string _portraitCardFile = "";
     private string _sceneImagePath = "";
-    private bool _isGeneratingScene = false;
-    private bool _isGeneratingLocation = false;
+    private bool _isGeneratingScene;
+    private bool _isGeneratingLocation;
 
-    // Live scene (left panel) — genre + freeform location become the roleplay scene
     private string _selectedGenre = SceneGenreCatalog.DefaultGenreId;
     private string _sceneLocationText = "";
     private List<CustomSelect.DropdownOption> _genreOptions = new();
     private bool _suppressScenePersist;
 
-    // Single character state
     private string _selectedCharFile = "";
     private string _charName = "(No Character Selected)";
-    private int _charAge = 0;
+    private int _charAge;
     private string _charPersonality = "No character card loaded.";
     private string _charBehavior = "";
     private string _charPhysical = "";
     private string _charStyle = "";
     private string _charAvatarPath = "";
-    private List<string> _charGoals = new();
-    private List<string> _charSkills = new();
     private List<CustomSelect.DropdownOption> _characterDropdownOptions = new();
 
-    private bool _isCharacterLoaded => !string.IsNullOrEmpty(_charName) && _charName != "(No Character Selected)";
+    private bool _isCharacterLoaded =>
+        !string.IsNullOrEmpty(_charName) && _charName != "(No Character Selected)";
+
+    private List<LogEntryModel> _outputLogs = new()
+    {
+        new() { Timestamp = DateTime.Now, Message = "System initialized. Blazor Desktop runtime ready.", LevelClass = "log-info" },
+        new() { Timestamp = DateTime.Now, Message = "SystemLeakLinter loaded. Output hygiene active.", LevelClass = "log-success" },
+        new() { Timestamp = DateTime.Now, Message = "Execution mode set to Player-Guided Mode.", LevelClass = "log-warning" },
+        new() { Timestamp = DateTime.Now, Message = "Stage ready. Use the right panel to load a character.", LevelClass = "log-info" }
+    };
+
+    private string _playerInput = "";
+    private List<ChatMessageModel> _dialogueFeed = new();
+
+    private int _lastScrolledDialogueCount = -1;
+    private int _lastScrolledLogCount = -1;
+    private bool _pendingScrollPanels;
+
+    protected override void OnInitialized()
+    {
+        ControlContext.OnUIUpdated += OnBackgroundAutoRefresh;
+        ControlContext.OnSettingsChanged += OnSettingsUpdated;
+        SimHost.OnDialogueLine += OnHostDialogueLine;
+        SimHost.OnLog += OnHostLog;
+        SimHost.OnFeedClear += OnHostFeedClear;
+
+        _genreOptions = SceneGenreCatalog.All
+            .Select(g => new CustomSelect.DropdownOption(g.Id, g.DisplayName))
+            .ToList();
+
+        var catalog = CharacterCatalog.ListCards();
+        _characterDropdownOptions = new List<CustomSelect.DropdownOption>
+        {
+            new("", "(No Character Selected)")
+        };
+        foreach (var card in catalog)
+            _characterDropdownOptions.Add(new(card.FileName, card.DisplayName));
+
+        var settings = ControlContext.CurrentSettings;
+        if (settings != null)
+        {
+            HydrateSceneFieldsFromSettings(settings);
+            OnSettingsUpdated(settings);
+            if (!string.IsNullOrWhiteSpace(settings.SelectedCharA)
+                && !settings.SelectedCharA.StartsWith("None", StringComparison.OrdinalIgnoreCase))
+            {
+                _ = SelectCharacter(settings.SelectedCharA, autoPlay: false);
+            }
+        }
+        else
+        {
+            _selectedGenre = SceneGenreCatalog.DefaultGenreId;
+            _sceneLocationText = SceneGenreCatalog.DefaultSceneFor(_selectedGenre);
+        }
+
+        if (string.IsNullOrEmpty(_sceneImagePath))
+            _ = AutoEnsureSceneArtworkAsync();
+    }
+
+    public void Dispose()
+    {
+        ControlContext.OnUIUpdated -= OnBackgroundAutoRefresh;
+        ControlContext.OnSettingsChanged -= OnSettingsUpdated;
+        SimHost.OnDialogueLine -= OnHostDialogueLine;
+        SimHost.OnLog -= OnHostLog;
+        SimHost.OnFeedClear -= OnHostFeedClear;
+    }
+
+    private void OpenPortraitFromRail() =>
+        OpenGeneratePortraitModal(BuildPortraitAppearance(), _selectedCharFile);
 
     private async Task GenerateSceneArtwork()
     {
-        PersistSceneFields(); // ensure typed location is saved before generate
+        PersistSceneFields();
         _isGeneratingScene = true;
         using var busy = BusyTaskService.BeginTask("scene_artwork", $"Rendering Scene Artwork ({SceneGenreCatalog.GetById(_selectedGenre).DisplayName})...");
         StateHasChanged();
@@ -357,22 +177,16 @@
                 : _sceneLocationText.Trim();
 
             string sceneContext = SceneGenreCatalog.ComposeSceneContext(_selectedGenre, place);
-
             string scenePrompt = ImageArtStyleCatalog.BuildScenePrompt(
                 sceneContext,
                 characterName: _isCharacterLoaded ? _charName : null,
-                characterDescription: null, // never inject personality into scene stills
+                characterDescription: null,
                 characterPhysical: _isCharacterLoaded ? BuildPortraitAppearance() : null,
                 artStyleId: artStyleId);
 
             _sceneImagePath = await AiImageGeneratorService.GeneratePortraitAsync(
-                scenePrompt,
-                "scene_location",
-                engineEnum,
-                imageModel,
-                allowPollinationsFallback: true,
-                artStyleId: artStyleId,
-                applyArtStyle: false);
+                scenePrompt, "scene_location", engineEnum, imageModel,
+                allowPollinationsFallback: true, artStyleId: artStyleId, applyArtStyle: false);
 
             await ApplySceneBackdropAsync(_sceneImagePath);
 
@@ -402,7 +216,6 @@
         }
     }
 
-    /// <summary>Soft full-app atmosphere from the current scene still.</summary>
     private async Task ApplySceneBackdropAsync(string? imageUrl)
     {
         try
@@ -410,42 +223,34 @@
             if (string.IsNullOrWhiteSpace(imageUrl) ||
                 (!imageUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
                  !imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
-                 !System.IO.File.Exists(imageUrl)))
+                 !File.Exists(imageUrl)))
             {
                 await JS.InvokeVoidAsync("csTheme.setSceneBackdrop", "");
                 return;
             }
 
-            // Local file paths need a data URI for CSS background-image
             string cssUrl = imageUrl;
             if (!imageUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
                 !imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
-                System.IO.File.Exists(imageUrl))
+                File.Exists(imageUrl))
             {
                 try
                 {
-                    byte[] bytes = await System.IO.File.ReadAllBytesAsync(imageUrl);
+                    byte[] bytes = await File.ReadAllBytesAsync(imageUrl);
                     string mime = imageUrl.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
                     cssUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
                 }
-                catch
-                {
-                    cssUrl = "";
-                }
+                catch { cssUrl = ""; }
             }
 
             await JS.InvokeVoidAsync("csTheme.setSceneBackdrop", cssUrl ?? "");
         }
-        catch
-        {
-            // Backdrop is cosmetic — never break scene generation
-        }
+        catch { }
     }
 
     private Task OnGenreChanged(string genreId)
     {
         _selectedGenre = SceneGenreCatalog.GetById(genreId).Id;
-        // If location is empty, seed a preset so the box isn't blank
         if (string.IsNullOrWhiteSpace(_sceneLocationText))
             _sceneLocationText = SceneGenreCatalog.DefaultSceneFor(_selectedGenre);
         PersistSceneFields();
@@ -484,12 +289,11 @@
                 LevelClass = "log-info"
             });
 
-            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(25));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
             string response = await client.CompleteRawAsync(prompt, cts.Token);
 
             if (!string.IsNullOrWhiteSpace(response))
             {
-                // Clean any quotes or wrappers
                 string cleaned = response.Trim().Trim('"', '\'', '`', '\n', '\r');
                 if (cleaned.StartsWith("Location:", StringComparison.OrdinalIgnoreCase))
                     cleaned = cleaned[9..].Trim();
@@ -509,7 +313,6 @@
                 }
             }
 
-            // Fallback to genre preset if empty response
             ApplyGenrePreset();
         }
         catch (Exception ex)
@@ -529,9 +332,6 @@
         }
     }
 
-    /// <summary>
-    /// Genre + location text are the active scene: persisted to settings and host override.
-    /// </summary>
     private void PersistSceneFields()
     {
         if (_suppressScenePersist) return;
@@ -544,7 +344,6 @@
             _selectedGenre = genre;
             _sceneLocationText = place;
 
-            // Avoid re-entrancy loops from OnSettingsChanged → HydrateSceneFields
             _suppressScenePersist = true;
             ControlContext.PatchScene(genre, place);
             SimHost.SetSceneOverride(place);
@@ -565,20 +364,6 @@
             : settings.ScenePrompt;
     }
 
-    private void ShowAddCharacter()
-    {
-        // Clear current character to allow loading a new one
-        if (_isCharacterLoaded)
-        {
-            ClearCharacter();
-        }
-        // Focus will be handled by the dropdown itself when user clicks
-    }
-
-    /// <param name="autoPlay">
-    /// True only for explicit user selection from the dropdown.
-    /// Startup hydrate and catalog refresh must pass false to avoid re-entry / Play storms.
-    /// </param>
     private async Task SelectCharacter(string fileName, bool autoPlay = false)
     {
         if (string.IsNullOrEmpty(fileName) ||
@@ -593,7 +378,6 @@
             return;
         }
 
-        // Already on stage — do not re-save, re-log, or re-Play (prevents refresh feedback loops).
         if (string.Equals(_selectedCharFile, fileName, StringComparison.Ordinal) && _isCharacterLoaded)
         {
             await Task.CompletedTask;
@@ -604,7 +388,6 @@
         {
             var info = CharacterCatalog.LoadCardDetails(fileName);
 
-            // Validate card data
             if (string.IsNullOrWhiteSpace(info.Name) ||
                 info.Name.Equals("Unknown Character", StringComparison.OrdinalIgnoreCase) ||
                 info.Description.Contains("not found", StringComparison.OrdinalIgnoreCase))
@@ -620,7 +403,6 @@
                 return;
             }
 
-            // Load character data
             _selectedCharFile = fileName;
             _charName = info.Name;
             _charAge = info.Age;
@@ -629,12 +411,8 @@
             _charPhysical = info.Physical;
             _charStyle = info.CharacterStyle;
             _charAvatarPath = info.AvatarPath;
-            _charGoals = info.Goals;
-            _charSkills = info.Skills;
 
             SimHost.SetStagedCharacter(fileName);
-
-            // Quiet persist so next startup restores selection without firing OnUIUpdated.
             SaveSelectedCharacter(fileName);
 
             _outputLogs.Add(new LogEntryModel
@@ -666,25 +444,19 @@
 
             StateHasChanged();
 
-            // Load portrait from DB, disk cache, or auto-generate if missing
             string cardId = CharacterCatalog.GetCardId(fileName);
             string avatar = ResolveStoredPortraitUri(fileName, info.AvatarPath);
 
             if (IsDisplayableAvatar(avatar))
-            {
                 _charAvatarPath = avatar;
-            }
             else
             {
                 _charAvatarPath = "";
                 _ = AutoEnsurePortraitAsync(cardId, info.Physical, info.CharacterStyle);
             }
 
-            // Auto-render / update scene artwork with character presence if missing or on selection
             if (string.IsNullOrEmpty(_sceneImagePath))
-            {
                 _ = AutoEnsureSceneArtworkAsync();
-            }
 
             StateHasChanged();
         }
@@ -707,21 +479,18 @@
         if (string.IsNullOrWhiteSpace(fileName)) return "";
 
         string cardId = CharacterCatalog.GetCardId(fileName);
-        if (string.IsNullOrEmpty(cardId)) 
+        if (string.IsNullOrEmpty(cardId))
             return IsDisplayableAvatar(catalogAvatarPath) ? catalogAvatarPath : "";
 
         try
         {
-            string? dbUri = CharacterSimulator.Logic.Services.CharacterPortraitService.TryGetStoredDataUri(cardId);
+            string? dbUri = CharacterPortraitService.TryGetStoredDataUri(cardId);
             if (!string.IsNullOrEmpty(dbUri))
                 return dbUri;
         }
         catch { }
 
-        if (IsDisplayableAvatar(catalogAvatarPath))
-            return catalogAvatarPath;
-
-        return "";
+        return IsDisplayableAvatar(catalogAvatarPath) ? catalogAvatarPath : "";
     }
 
     private async Task AutoEnsurePortraitAsync(string cardId, string physical, string characterStyle)
@@ -729,15 +498,11 @@
         if (string.IsNullOrWhiteSpace(cardId)) return;
         try
         {
-            // Imaging uses body + dress only — never personality/behavior
-            string prompt = CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(
-                physical, characterStyle, _charName);
+            string prompt = CardFieldFormatter.BuildImagingPrompt(physical, characterStyle, _charName);
             if (string.IsNullOrWhiteSpace(prompt))
                 prompt = string.IsNullOrWhiteSpace(_charName) ? "solo character portrait" : $"{_charName}, solo character portrait";
 
-            string portraitUri = await CharacterSimulator.Logic.Services.CharacterPortraitService.EnsurePortraitAsync(
-                cardId, prompt, generateIfMissing: true);
-
+            string portraitUri = await CharacterPortraitService.EnsurePortraitAsync(cardId, prompt, generateIfMissing: true);
             if (!string.IsNullOrEmpty(portraitUri))
             {
                 _charAvatarPath = portraitUri;
@@ -754,11 +519,7 @@
     {
         if (_isGeneratingScene || !string.IsNullOrEmpty(_sceneImagePath))
             return;
-
-        try
-        {
-            await GenerateSceneArtwork();
-        }
+        try { await GenerateSceneArtwork(); }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Index] Auto ensure scene artwork failed: {ex.Message}");
@@ -777,11 +538,7 @@
         _charPhysical = "";
         _charStyle = "";
         _charAvatarPath = "";
-        _charGoals = new();
-        _charSkills = new();
         SimHost.SetStagedCharacter("");
-
-        // Quiet clear — must not fire OnUIUpdated (would re-enter refresh → ClearCharacter).
         SaveSelectedCharacter("");
 
         if (wasLoaded)
@@ -800,80 +557,7 @@
         !string.IsNullOrEmpty(path) &&
         (path.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
          path.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
-         System.IO.File.Exists(path));
-
-    private List<LogEntryModel> _outputLogs = new()
-    {
-        new LogEntryModel { Timestamp = DateTime.Now, Message = "System initialized. Blazor Desktop runtime ready.", LevelClass = "log-info" },
-        new LogEntryModel { Timestamp = DateTime.Now, Message = "SystemLeakLinter loaded. Output hygiene active.", LevelClass = "log-success" },
-        new LogEntryModel { Timestamp = DateTime.Now, Message = "Execution mode set to Player-Guided Mode.", LevelClass = "log-warning" },
-        new LogEntryModel { Timestamp = DateTime.Now, Message = "Stage ready. Use the right panel to load a character.", LevelClass = "log-info" }
-    };
-
-    private string _playerInput = "";
-    private List<ChatMessageModel> _dialogueFeed = new()
-    {
-    };
-
-    // Autoscroll: track counts so OnAfterRender scrolls after Blazor commits DOM.
-    private int _lastScrolledDialogueCount = -1;
-    private int _lastScrolledLogCount = -1;
-    private bool _pendingScrollPanels;
-
-    protected override void OnInitialized()
-    {
-        ControlContext.OnUIUpdated += OnBackgroundAutoRefresh;
-        ControlContext.OnSettingsChanged += OnSettingsUpdated;
-        SimHost.OnDialogueLine += OnHostDialogueLine;
-        SimHost.OnLog += OnHostLog;
-        SimHost.OnFeedClear += OnHostFeedClear;
-
-        _genreOptions = SceneGenreCatalog.All
-            .Select(g => new CustomSelect.DropdownOption(g.Id, g.DisplayName))
-            .ToList();
-
-        var catalog = CharacterCatalog.ListCards();
-        _characterDropdownOptions = new List<CustomSelect.DropdownOption>
-        {
-            new("", "(No Character Selected)")
-        };
-        foreach (var card in catalog)
-        {
-            _characterDropdownOptions.Add(new(card.FileName, card.DisplayName));
-        }
-
-        // Restore last card onto the stage without auto-play (user starts with Play / Send).
-        var settings = ControlContext.CurrentSettings;
-        if (settings != null)
-        {
-            HydrateSceneFieldsFromSettings(settings);
-            OnSettingsUpdated(settings);
-            if (!string.IsNullOrWhiteSpace(settings.SelectedCharA)
-                && !settings.SelectedCharA.StartsWith("None", StringComparison.OrdinalIgnoreCase))
-            {
-                _ = SelectCharacter(settings.SelectedCharA, autoPlay: false);
-            }
-        }
-        else
-        {
-            _selectedGenre = SceneGenreCatalog.DefaultGenreId;
-            _sceneLocationText = SceneGenreCatalog.DefaultSceneFor(_selectedGenre);
-        }
-
-        if (string.IsNullOrEmpty(_sceneImagePath))
-        {
-            _ = AutoEnsureSceneArtworkAsync();
-        }
-    }
-
-    public void Dispose()
-    {
-        ControlContext.OnUIUpdated -= OnBackgroundAutoRefresh;
-        ControlContext.OnSettingsChanged -= OnSettingsUpdated;
-        SimHost.OnDialogueLine -= OnHostDialogueLine;
-        SimHost.OnLog -= OnHostLog;
-        SimHost.OnFeedClear -= OnHostFeedClear;
-    }
+         File.Exists(path));
 
     private void OnHostDialogueLine(DialogueLine line)
     {
@@ -918,7 +602,6 @@
                 Message = message.Length > 2000 ? message[..2000] + "…" : message,
                 LevelClass = level
             });
-            // Cap log growth
             if (_outputLogs.Count > 500)
                 _outputLogs.RemoveRange(0, _outputLogs.Count - 400);
             RequestScrollPanels();
@@ -944,7 +627,6 @@
         RequestScrollPanels();
     }
 
-    /// <summary>Scroll dialogue + system log after DOM is committed.</summary>
     private async Task ScrollPanelsToBottomAsync()
     {
         try
@@ -952,10 +634,7 @@
             await JS.InvokeVoidAsync("scrollPanelsToBottom",
                 new[] { "dialogueFeed", "outputLogBox", "historyLogBox" });
         }
-        catch
-        {
-            // WebView may not be ready yet
-        }
+        catch { }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -1014,33 +693,24 @@
                     new("", "(No Character Selected)")
                 };
                 foreach (var card in catalog)
-                {
                     _characterDropdownOptions.Add(new(card.FileName, card.DisplayName));
-                }
 
-                // Prefer settings (setup may have changed SelectedCharA) then current stage.
                 string? desired = ControlContext.CurrentSettings?.SelectedCharA;
                 if (string.IsNullOrWhiteSpace(desired)
                     || desired.StartsWith("None", StringComparison.OrdinalIgnoreCase))
-                {
                     desired = _selectedCharFile;
-                }
 
                 bool desiredExists = !string.IsNullOrWhiteSpace(desired)
                     && catalog.Any(c => c.FileName == desired);
 
                 if (desiredExists)
                 {
-                    // Only load when the staged file actually changed — never re-enter same card.
                     if (!string.Equals(_selectedCharFile, desired, StringComparison.Ordinal)
                         || !_isCharacterLoaded)
-                    {
                         await SelectCharacter(desired!, autoPlay: false);
-                    }
                 }
                 else if (_isCharacterLoaded || !string.IsNullOrEmpty(_selectedCharFile))
                 {
-                    // Card removed from disk / none selected — clear stage quietly.
                     ClearCharacter();
                 }
 
@@ -1059,7 +729,6 @@
                     Message = $"🔄 UI refresh failed: {ex.Message}",
                     LevelClass = "log-error"
                 });
-                // Ensure dropdown has at least the empty option
                 _characterDropdownOptions = new List<CustomSelect.DropdownOption>
                 {
                     new("", "(No Character Selected)")
@@ -1072,7 +741,7 @@
     }
 
     private string BuildPortraitAppearance() =>
-        CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(_charPhysical, _charStyle, _charName);
+        CardFieldFormatter.BuildImagingPrompt(_charPhysical, _charStyle, _charName);
 
     private void OpenGeneratePortraitModal(string appearance, string cardFileName)
     {
@@ -1094,18 +763,14 @@
     private void OnPlayerInputKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
-        {
             SendPlayerInput();
-        }
     }
 
     private void SendPlayerInput()
     {
         if (string.IsNullOrWhiteSpace(_playerInput)) return;
-
         string line = _playerInput;
         _playerInput = "";
-        // Host posts the player bubble (and character replies / command results) via OnDialogueLine.
         SimHost.SubmitPlayerLine(line);
         RequestScrollPanels();
         StateHasChanged();
@@ -1122,7 +787,6 @@
     {
         try
         {
-            // Quiet patch only — UpdateSettings would raise OnUIUpdated and re-enter load.
             ControlContext.PatchSelectedCharacter(fileName);
         }
         catch (Exception ex)
@@ -1134,27 +798,5 @@
                 LevelClass = "log-error"
             });
         }
-    }
-
-    public record GoalItem(string Name, string Description);
-
-    public class LogEntryModel
-    {
-        public DateTime Timestamp { get; set; } = DateTime.Now;
-        public string Message { get; set; } = "";
-        public string LevelClass { get; set; } = "log-info";
-    }
-
-    public class ChatMessageModel
-    {
-        public string SpeakerName { get; set; } = "";
-        public string TargetName { get; set; } = "";
-        public string Dialogue { get; set; } = "";
-        public string SomaticText { get; set; } = "";
-        public string BondDeltaText { get; set; } = "";
-        public string SpeakerEmotionEmoji { get; set; } = "💬";
-        public string SpeakerColor { get; set; } = "#38BDF8";
-        public bool IsLeft { get; set; } = true;
-        public bool IsSystem { get; set; } = false;
     }
 }

@@ -1,0 +1,75 @@
+@* Left rail: scene + character images only *@
+
+<div class="character-panel character-panel-left image-rail">
+    <div class="image-block">
+        <div class="image-block-label">Scene</div>
+        <div class="scene-stage">
+            @if (!string.IsNullOrEmpty(SceneImagePath) && (File.Exists(SceneImagePath) || SceneImagePath.StartsWith("http") || SceneImagePath.StartsWith("data:")))
+            {
+                <img class="scene-stage-img" src="@SceneImagePath" alt="Scene Location" />
+            }
+            else
+            {
+                <div class="scene-stage-fallback">
+                    <div class="canvas-avatar-icon">🏙️</div>
+                    <div class="canvas-char-name">@GenreDisplayName</div>
+                    <div class="canvas-bio">
+                        @(string.IsNullOrWhiteSpace(SceneLocationText)
+                            ? "Set location on the right, then generate scene art."
+                            : (SceneLocationText.Length > 100 ? SceneLocationText[..97] + "…" : SceneLocationText))
+                    </div>
+                </div>
+            }
+        </div>
+        <button class="btn btn-secondary scene-generate-btn" disabled="@IsGeneratingScene" @onclick="HandleGenerateScene">
+            @(IsGeneratingScene ? "✨ Rendering Scene..." : "✨ Generate Scene Artwork")
+        </button>
+    </div>
+
+    <div class="image-block">
+        <div class="image-block-label">Character</div>
+        <div class="char-portrait-frame image-rail-portrait">
+            @if (IsCharacterLoaded && !string.IsNullOrEmpty(CharAvatarPath) && (File.Exists(CharAvatarPath) || CharAvatarPath.StartsWith("http") || CharAvatarPath.StartsWith("data:")))
+            {
+                <img class="char-portrait-img" src="@CharAvatarPath" alt="@CharName" />
+            }
+            else if (IsCharacterLoaded)
+            {
+                <div class="scene-stage-fallback">
+                    <div class="canvas-avatar-icon">👤</div>
+                    <div class="canvas-char-name">@CharName @(CharAge > 0 ? $"({CharAge})" : "")</div>
+                    <div class="canvas-bio">Generate a portrait from Physical + Style on the right.</div>
+                </div>
+            }
+            else
+            {
+                <div class="scene-stage-fallback">
+                    <div class="canvas-avatar-icon">👤</div>
+                    <div class="canvas-char-name">No character</div>
+                    <div class="canvas-bio">Select a character on the right.</div>
+                </div>
+            }
+        </div>
+        <button class="btn btn-secondary scene-generate-btn char-portrait-generate-btn"
+                disabled="@(!IsCharacterLoaded)"
+                @onclick="HandleGeneratePortrait">
+            ✨ Generate Portrait
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string SceneImagePath { get; set; } = "";
+    [Parameter] public string GenreDisplayName { get; set; } = "";
+    [Parameter] public string SceneLocationText { get; set; } = "";
+    [Parameter] public bool IsGeneratingScene { get; set; }
+    [Parameter] public bool IsCharacterLoaded { get; set; }
+    [Parameter] public string CharName { get; set; } = "";
+    [Parameter] public int CharAge { get; set; }
+    [Parameter] public string CharAvatarPath { get; set; } = "";
+    [Parameter] public EventCallback OnGenerateScene { get; set; }
+    [Parameter] public EventCallback OnGeneratePortrait { get; set; }
+
+    private Task HandleGenerateScene() => OnGenerateScene.InvokeAsync();
+    private Task HandleGeneratePortrait() => OnGeneratePortrait.InvokeAsync();
+}
