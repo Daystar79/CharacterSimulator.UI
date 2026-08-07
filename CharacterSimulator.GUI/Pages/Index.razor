@@ -91,7 +91,7 @@
                 {
                     <div class="chat-bubble chat-system">
                         <div class="dialogue-text">
-                            Load a character on the right, then type a line and press Send — or ▶ Play.
+                            Load a character on the right to auto-start the simulation.
                             Slash commands: /help /play /pause /step /stop /scene /clear /adult on
                         </div>
                     </div>
@@ -462,9 +462,12 @@
             _dialogueFeed.Add(new ChatMessageModel
             {
                 SpeakerName = "System",
-                Dialogue = $"🎭 {info.Name} loaded onto the stage. Type a line and Send, or press ▶ Play.",
+                Dialogue = $"🎭 {info.Name} loaded onto the stage. Auto-play starting...",
                 IsSystem = true
             });
+
+            // Auto-play the simulation when a character is loaded
+            SimHost.Play();
 
             StateHasChanged();
 

@@ -1,6 +1,7 @@
 @using CharacterSimulator.Logic
 @using CharacterSimulator.Logic.Services
 @inject TurnControlContext ControlContext
+@inject IJSRuntime JS
 
 <div class="modal-overlay">
     <div class="modal-card" style="width: 560px;">
@@ -10,9 +11,13 @@
         </div>
         <div class="modal-body">
             <p style="font-size: 0.75rem; color: var(--text-secondary);">
-                Portrait for <b>@SlotName</b> · card <code>@_cardId</code>.
                 Uses the engine selected below (synced from Setup → Imaging).
             </p>
+
+            <div style="margin-bottom: 0.75rem;">
+                <label class="form-label" style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">Character:</label>
+                <CustomSelect Value="@_selectedCharacterFile" ValueChanged="OnCharacterChanged" Options="_characterOptions" style="width: 100%;" />
+            </div>
 
             <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.5rem;">
                 <div class="form-group" style="margin-bottom: 0.5rem;">
@@ -101,6 +106,8 @@
 
     private List<CustomSelect.DropdownOption> _engineOptions = new();
     private List<CustomSelect.DropdownOption> _modelOptions = new();
+    private List<CustomSelect.DropdownOption> _characterOptions = new();
+    private string _selectedCharacterFile = "";
 
     private string _selectedEngine = ImageEngineDetector.DefaultEngineId;
     private string _selectedModel = "flux";
@@ -117,14 +124,45 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _cardId = CharacterCatalog.GetCardId(CardFileName);
-        if (string.IsNullOrEmpty(_cardId))
-            _cardId = SlotName.ToLowerInvariant().Replace(" ", "_");
+        // Load character list for dropdown
+        LoadCharacterOptions();
 
+        // Set initial character selection
+        _selectedCharacterFile = CardFileName;
+        
+        // Update cardId and prompt based on the initial character
+        if (!string.IsNullOrEmpty(_selectedCharacterFile))
+        {
+            _cardId = CharacterCatalog.GetCardId(_selectedCharacterFile);
+            if (string.IsNullOrEmpty(_cardId))
+                _cardId = SlotName.ToLowerInvariant().Replace(" ", "_");
+        }
+        else
+        {
+            _cardId = SlotName.ToLowerInvariant().Replace(" ", "_");
+        }
+
+        // Use the passed appearance if available, otherwise try to get from character
         if (!string.IsNullOrEmpty(CharacterAppearance))
+        {
             _prompt = CharacterAppearance;
+        }
         else if (string.IsNullOrEmpty(_prompt))
-            _prompt = "Character portrait, high quality detailed artwork";
+        {
+            // Try to get appearance from the selected character
+            if (!string.IsNullOrEmpty(_selectedCharacterFile))
+            {
+                try
+                {
+                    var info = CharacterCatalog.LoadCardDetails(_selectedCharacterFile);
+                    _prompt = !string.IsNullOrEmpty(info.Physical) ? info.Physical : 
+                             (!string.IsNullOrEmpty(info.Description) ? info.Description : "");
+                }
+                catch { }
+            }
+            if (string.IsNullOrEmpty(_prompt))
+                _prompt = "Character portrait, high quality detailed artwork";
+        }
 
         // Component is created fresh each time Index opens the modal (@if) —
         // always pull latest Setup → Imaging choice here.
@@ -149,6 +187,54 @@
         await LoadEngineOptionsAsync();
         await LoadModelOptionsAsync();
         StateHasChanged();
+    }
+
+    private void LoadCharacterOptions()
+    {
+        _characterOptions = new List<CustomSelect.DropdownOption>
+        {
+            new("", "(Select a character)")
+        };
+        
+        try
+        {
+            var catalog = CharacterCatalog.ListCards();
+            foreach (var card in catalog)
+            {
+                _characterOptions.Add(new(card.FileName, card.DisplayName));
+            }
+        }
+        catch
+        {
+            // Fallback to empty list
+        }
+    }
+
+    private async Task OnCharacterChanged(string fileName)
+    {
+        _selectedCharacterFile = fileName;
+        
+        if (!string.IsNullOrEmpty(fileName))
+        {
+            _cardId = CharacterCatalog.GetCardId(fileName);
+            
+            try
+            {
+                var info = CharacterCatalog.LoadCardDetails(fileName);
+                _prompt = !string.IsNullOrEmpty(info.Physical) ? info.Physical : 
+                         (!string.IsNullOrEmpty(info.Description) ? info.Description : "");
+                
+                // If still empty, use a default
+                if (string.IsNullOrEmpty(_prompt))
+                    _prompt = "Character portrait, high quality detailed artwork";
+            }
+            catch
+            {
+                _prompt = "Character portrait, high quality detailed artwork";
+            }
+        }
+        
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadEngineOptionsAsync()
