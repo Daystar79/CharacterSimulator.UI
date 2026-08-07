@@ -7,24 +7,23 @@ namespace CharacterSimulator.Logic.Tests;
 public class ImageArtStyleCatalogTests
 {
     [Fact]
-    public void ApplyPortraitStyle_PrependsArtStyleCueAtBeginning()
+    public void ApplyPortraitStyle_LeadsWithAppearanceThenArtStyle()
     {
         string prompt = "Slender build with silver hair and blue eyes";
-        
-        // Anime style
+
+        // Appearance-first so Pollinations/Flux weight body details over style fluff
         string animePrompt = ImageArtStyleCatalog.ApplyPortraitStyle(prompt, "anime");
-        Assert.StartsWith("anime style character portrait", animePrompt, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("solo character portrait of this exact person:", animePrompt, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(prompt, animePrompt);
+        Assert.Contains("anime style character portrait", animePrompt, StringComparison.OrdinalIgnoreCase);
 
-        // Photoreal style
         string photoPrompt = ImageArtStyleCatalog.ApplyPortraitStyle(prompt, "photoreal");
-        Assert.StartsWith("photorealistic portrait photo", photoPrompt, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(prompt, photoPrompt);
+        Assert.Contains("photorealistic portrait photo", photoPrompt, StringComparison.OrdinalIgnoreCase);
 
-        // Pixel art style
         string pixelPrompt = ImageArtStyleCatalog.ApplyPortraitStyle(prompt, "pixel");
-        Assert.StartsWith("pixel art character portrait", pixelPrompt, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(prompt, pixelPrompt);
+        Assert.Contains("pixel art character portrait", pixelPrompt, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

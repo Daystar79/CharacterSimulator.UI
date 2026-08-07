@@ -33,7 +33,7 @@ public class Program
         var app = builder.Build();
 
         app.MainWindow
-            .SetTitle("Character Simulator Studio — Blazor Desktop")
+            .SetTitle("Simulacra")
             .SetSize(1400, 900)
             .SetUseOsDefaultSize(false)
             .Center();

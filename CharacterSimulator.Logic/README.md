@@ -1,12 +1,30 @@
-# CharacterSimulator.Logic — Ported Bookkeeping & Host Services
+# CharacterSimulator.Logic — Host services (Simulacra)
 
-This library houses deterministic host logic and bookkeeping rules for `CharacterSimulator.UI` in C#.
+Deterministic **desktop/host** bookkeeping for **Simulacra** (the CharacterSimulator Photino/Blazor GUI). This is not the cognitive pipeline math — the LLM still owns psyche + prose.
 
 ## Architecture Principles
 
-- **C# owns**: File I/O, schemas, numeric clamping, safety gates, durable log commits, parsing/validation, slash commands, prompt assembly, output hygiene linting, and somatic catalog lookups.
+- **C# owns**: File I/O, card load/index, schemas, numeric clamping, safety gates, durable log commits, parsing/validation, slash commands, prompt assembly, output hygiene linting, image orchestration, SQLite profiles/sessions, and somatic catalog lookups.
 - **LLM owns**: Cognitive Pipeline "mind" and RP prose rendering. No procedural math replaces psychological roleplay.
-- **UI projects (GUI/TUI)** stay thin by wiring directly to services in this package.
+- **GUI** stays thin by wiring to services in this package.
+
+## Cards & display fields
+
+Identity cards expose separate strings for host UI and prompts:
+
+| Property / field | Use |
+|:---|:---|
+| `Personality` | Who they are |
+| `Behavior` | How they act |
+| `PhysicalDescription` | Body (imaging) |
+| `CharacterStyle` | Default dress |
+| `Bio` | Background/knowledge only (not a merge of the above) |
+
+Helpers: `CardFieldFormatter` (flatten physical/style; read personality/behavior with legacy fallbacks), `CharacterLoader`, `CharacterCatalog.LoadCardDetails`.
+
+## Themes
+
+`Services/ThemeCatalog` lists chrome pack ids (`midnight`, `cyberpunk`, `matrix`, `amber`, `obsidian`) plus preview swatches. Actual colors live in GUI `wwwroot/css/app.css` design tokens.
 
 ## New Sub-namespaces and Services
 

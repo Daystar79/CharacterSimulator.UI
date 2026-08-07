@@ -201,14 +201,10 @@ public static class CardFieldFormatter
     }
 
     /// <summary>Portrait/image prompt: body + optional default dress. Never personality/behavior.</summary>
-    public static string BuildImagingPrompt(string physical, string characterStyle)
+    public static string BuildImagingPrompt(string physical, string characterStyle, string? name = null)
     {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(physical))
-            parts.Add(physical.Trim());
-        if (!string.IsNullOrWhiteSpace(characterStyle))
-            parts.Add(characterStyle.Trim());
-        return string.Join(", ", parts);
+        // Prefer structured portrait subject builder (appearance-first wording for image APIs)
+        return Services.ImageArtStyleCatalog.BuildPortraitSubject(name, physical, characterStyle);
     }
 
     private static string? GetString(JsonElement root, string name)

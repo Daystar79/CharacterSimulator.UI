@@ -5,94 +5,83 @@
 @inject IJSRuntime JS
 
 <div class="workspace-grid">
-    
-    <!-- LEFT PANEL: SCENE IMAGE + GENRE + EDITABLE LOCATION (this IS the scene) -->
-    <div class="character-panel">
-        <div class="portrait-container">
-            @if (!string.IsNullOrEmpty(_sceneImagePath) && (System.IO.File.Exists(_sceneImagePath) || _sceneImagePath.StartsWith("http") || _sceneImagePath.StartsWith("data:")))
-            {
-                <img class="portrait-img" src="@_sceneImagePath" alt="Scene Location" style="aspect-ratio: 16/9; object-fit: cover;" />
-            }
-            else
-            {
-                <div class="canvas-fallback" style="padding: 1.5rem 1rem;">
-                    <div class="canvas-avatar-icon" style="font-size: 2rem;">🏙️</div>
-                    <div class="canvas-char-name" style="font-size: 0.8rem;">@SceneGenreCatalog.GetById(_selectedGenre).DisplayName</div>
-                    <div class="canvas-bio" style="font-size: 0.7rem;">
-                        @(string.IsNullOrWhiteSpace(_sceneLocationText)
-                            ? "Describe the place below — that becomes the scene."
-                            : (_sceneLocationText.Length > 120 ? _sceneLocationText[..117] + "…" : _sceneLocationText))
+
+    <!-- LEFT: images only — stage (scene) + portrait -->
+    <div class="character-panel character-panel-left image-rail">
+        <div class="image-block">
+            <div class="image-block-label">Scene</div>
+            <div class="scene-stage">
+                @if (!string.IsNullOrEmpty(_sceneImagePath) && (System.IO.File.Exists(_sceneImagePath) || _sceneImagePath.StartsWith("http") || _sceneImagePath.StartsWith("data:")))
+                {
+                    <img class="scene-stage-img" src="@_sceneImagePath" alt="Scene Location" />
+                }
+                else
+                {
+                    <div class="scene-stage-fallback">
+                        <div class="canvas-avatar-icon">🏙️</div>
+                        <div class="canvas-char-name">@SceneGenreCatalog.GetById(_selectedGenre).DisplayName</div>
+                        <div class="canvas-bio">
+                            @(string.IsNullOrWhiteSpace(_sceneLocationText)
+                                ? "Set location on the right, then generate scene art."
+                                : (_sceneLocationText.Length > 100 ? _sceneLocationText[..97] + "…" : _sceneLocationText))
+                        </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
+            <button class="btn btn-secondary scene-generate-btn" disabled="@_isGeneratingScene" @onclick="GenerateSceneArtwork">
+                @(_isGeneratingScene ? "✨ Rendering Scene..." : "✨ Generate Scene Artwork")
+            </button>
         </div>
 
-        <button class="btn btn-secondary" style="width: 100%; margin-top: 0.4rem; font-size: 0.7rem; padding: 0.25rem;" disabled="@_isGeneratingScene" @onclick="GenerateSceneArtwork">
-            @(_isGeneratingScene ? "✨ Rendering Scene..." : "✨ Generate Scene Artwork")
-        </button>
-
-        <div style="margin-top: 0.75rem; background: #0f172a; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.55rem; width: 100%; box-sizing: border-box;">
-            <div style="width: 100%;">
-                <div class="section-title" style="margin-bottom: 0.3rem; font-size: 0.7rem; color: var(--accent-purple);">
-                    <span>🎭</span>
-                    <span>GENRE (environment only)</span>
-                </div>
-                <CustomSelect Value="@_selectedGenre" ValueChanged="OnGenreChanged" Options="_genreOptions" style="width: 100%;" />
-                <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 0.25rem; line-height: 1.3;">
-                    @SceneGenreCatalog.GetById(_selectedGenre).Description
-                </div>
-            </div>
-
-            <div style="width: 100%;">
-                <div class="section-title" style="margin-bottom: 0.3rem; font-size: 0.7rem; color: var(--accent-amber);">
-                    <span>📍</span>
-                    <span>LOCATION &amp; ATMOSPHERE</span>
-                </div>
-                <textarea
-                    class="form-control"
-                    rows="4"
-                    @bind="_sceneLocationText"
-                    @bind:event="oninput"
-                    @onfocusout="PersistSceneFields"
-                    placeholder="Place, time of day, weather, sensory detail… this is the active scene for roleplay and scene art."
-                    style="width: 100%; box-sizing: border-box; font-size: 0.72rem; line-height: 1.4; resize: vertical; min-height: 4.5rem; font-family: inherit;"
-                    title="Saved to settings. Used when you Play / Send and for Generate Scene Artwork."></textarea>
-                <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.35rem; width: 100%;">
-                    <button type="button" class="btn btn-primary" style="width: 100%; font-size: 0.65rem; padding: 0.25rem 0.45rem; justify-content: center;" disabled="@_isGeneratingLocation" @onclick="GenerateAiLocationAsync" title="Use AI to generate a vivid, custom location & atmosphere description for this genre">
-                        @(_isGeneratingLocation ? "✨ Generating Scene..." : "✨ Generate AI Location")
-                    </button>
-                    <div style="display: flex; gap: 0.35rem; width: 100%;">
-                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 0.62rem; padding: 0.2rem 0.45rem; justify-content: center;" @onclick="ApplyGenrePreset" title="Fill box with this genre's default preset place">
-                            ⇢ Static preset
-                        </button>
-                        <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 0.62rem; padding: 0.2rem 0.45rem; justify-content: center;" @onclick="PersistSceneFields" title="Save genre + location now">
-                            💾 Save scene
-                        </button>
+        <div class="image-block">
+            <div class="image-block-label">Character</div>
+            <div class="char-portrait-frame image-rail-portrait">
+                @if (_isCharacterLoaded && !string.IsNullOrEmpty(_charAvatarPath) && (System.IO.File.Exists(_charAvatarPath) || _charAvatarPath.StartsWith("http") || _charAvatarPath.StartsWith("data:")))
+                {
+                    <img class="char-portrait-img" src="@_charAvatarPath" alt="@_charName" />
+                }
+                else if (_isCharacterLoaded)
+                {
+                    <div class="scene-stage-fallback">
+                        <div class="canvas-avatar-icon">👤</div>
+                        <div class="canvas-char-name">@_charName @(_charAge > 0 ? $"({_charAge})" : "")</div>
+                        <div class="canvas-bio">Generate a portrait from Physical + Style on the right.</div>
                     </div>
-                </div>
+                }
+                else
+                {
+                    <div class="scene-stage-fallback">
+                        <div class="canvas-avatar-icon">👤</div>
+                        <div class="canvas-char-name">No character</div>
+                        <div class="canvas-bio">Select a character on the right.</div>
+                    </div>
+                }
             </div>
+            <button class="btn btn-secondary scene-generate-btn char-portrait-generate-btn"
+                    disabled="@(!_isCharacterLoaded)"
+                    @onclick="() => OpenGeneratePortraitModal(BuildPortraitAppearance(), _selectedCharFile)">
+                ✨ Generate Portrait
+            </button>
         </div>
     </div>
 
-    <!-- CENTER PANEL: TABS AT TOP, CONTENT BELOW -->
+    <!-- CENTER: dialogue -->
     <div class="feed-panel">
-        <!-- TABS FOR CENTER PANEL CONTENT -->
-        <div class="panel-tabs-header" style="margin-bottom: 0.75rem;">
+        <div class="panel-tabs-header">
             <button class="panel-tab-btn @(_centerTab == "Dialogue" ? "active" : "")" @onclick='() => SwitchCenterTab("Dialogue")'>
-                💬 DIALOGUE
+                💬 Dialogue
             </button>
             <button class="panel-tab-btn @(_centerTab == "System" ? "active" : "")" @onclick='() => SwitchCenterTab("System")'>
-                ⚙️ SYSTEM
+                ⚙️ System
             </button>
             <button class="panel-tab-btn @(_centerTab == "History" ? "active" : "")" @onclick='() => SwitchCenterTab("History")'>
-                📜 HISTORY
+                📜 History
             </button>
         </div>
 
         @if (_centerTab == "Dialogue")
         {
-            <!-- DIALOGUE FEED -->
-            <div class="feed-messages" id="dialogueFeed" style="flex: 1; overflow-y: auto; min-height: 0;">
+            <div class="feed-messages" id="dialogueFeed">
                 @if (_dialogueFeed.Count == 0)
                 {
                     <div class="chat-bubble chat-system">
@@ -108,7 +97,7 @@
                         @if (!msg.IsSystem)
                         {
                             <div class="chat-header">
-                                <span class="speaker-name" style="color: @msg.SpeakerColor;">@msg.SpeakerName @(string.IsNullOrEmpty(msg.TargetName) ? "" : "➔ " + msg.TargetName)</span>
+                                <span class="speaker-name" style="@(string.IsNullOrEmpty(msg.SpeakerColor) ? null : $"color:{msg.SpeakerColor}")">@msg.SpeakerName @(string.IsNullOrEmpty(msg.TargetName) ? "" : "➔ " + msg.TargetName)</span>
                                 <span>@msg.SpeakerEmotionEmoji</span>
                             </div>
                             @if (!string.IsNullOrEmpty(msg.SomaticText))
@@ -119,12 +108,11 @@
                                 </div>
                             }
                         }
-                        <div class="dialogue-text" style="white-space: pre-wrap;">@msg.Dialogue</div>
+                        <div class="dialogue-text">@msg.Dialogue</div>
                     </div>
                 }
             </div>
 
-            <!-- PLAYER PROMPT INPUT -->
             <div class="player-input-bar">
                 <input class="input-box" placeholder="Type prompt or command (e.g. /step, /adult)..." @bind="_playerInput" @bind:event="oninput" @onkeyup="OnPlayerInputKeyUp" />
                 <button class="btn btn-primary" @onclick="SendPlayerInput">Send ➔</button>
@@ -132,150 +120,181 @@
         }
         else if (_centerTab == "System")
         {
-            <!-- SYSTEM OUTPUT LOG -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <span class="section-title" style="margin: 0; color: var(--accent-blue);">⚙️ SYSTEM DIAGNOSTICS & LOG</span>
-                <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" @onclick="ClearLogs">Clear</button>
+            <div class="panel-toolbar">
+                <span class="section-title section-title-accent">⚙️ System diagnostics &amp; log</span>
+                <button class="btn btn-secondary btn-sm" @onclick="ClearLogs">Clear</button>
             </div>
-            <div class="output-log-container" id="outputLogBox" style="flex: 1; min-height: 0; max-height: none; height: auto; overflow-y: auto;">
+            <div class="output-log-container" id="outputLogBox">
                 @foreach (var entry in _outputLogs)
                 {
                     <div class="log-entry @entry.LevelClass">
                         <span class="log-time">[@entry.Timestamp.ToString("HH:mm:ss")]</span>
-                        <span style="white-space: pre-wrap;">@entry.Message</span>
+                        <span class="log-message">@entry.Message</span>
                     </div>
                 }
             </div>
         }
         else
         {
-            <!-- TURN HISTORY -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <span class="section-title" style="margin: 0;">📜 TURN HISTORY LOG</span>
-                <span style="font-size: 0.68rem; color: var(--text-muted);">Total Turns: @_dialogueFeed.Count</span>
+            <div class="panel-toolbar">
+                <span class="section-title">📜 Turn history</span>
+                <span class="panel-toolbar-meta">Total turns: @_dialogueFeed.Count</span>
             </div>
-            <div class="output-log-container" id="historyLogBox" style="flex: 1; min-height: 0; max-height: none; height: auto; overflow-y: auto;">
+            <div class="output-log-container" id="historyLogBox">
                 @for (int i = 0; i < _dialogueFeed.Count; i++)
                 {
                     var turn = _dialogueFeed[i];
-                    <div style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
-                        <div style="font-weight: 700; color: @turn.SpeakerColor; font-size: 0.7rem;">
+                    <div class="history-turn">
+                        <div class="history-turn-title" style="@(string.IsNullOrEmpty(turn.SpeakerColor) ? null : $"color:{turn.SpeakerColor}")">
                             Turn #@(i + 1): @turn.SpeakerName @(turn.IsSystem ? "" : "➔ " + turn.TargetName)
                         </div>
                         @if (!string.IsNullOrEmpty(turn.SomaticText))
                         {
-                            <div class="somatic-tag" style="margin-top: 0.25rem;">
+                            <div class="somatic-tag">
                                 <span class="somatic-label">Somatic</span>
                                 <span class="somatic-body">@turn.SomaticText</span>
                             </div>
                         }
-                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.15rem; white-space: pre-wrap;">
-                            @turn.Dialogue
-                        </div>
+                        <div class="history-turn-body">@turn.Dialogue</div>
                     </div>
                 }
             </div>
         }
     </div>
 
-    <!-- RIGHT PANEL: SINGLE CHARACTER VIEW -->
-    <div class="character-panel character-panel-right" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
-        <!-- TAB HEADER: Character Title -->
-        <div class="panel-tabs-header" style="margin-bottom: 0.5rem; width: 100%; flex: 0 0 auto;">
-            <button class="panel-tab-btn active" style="width: 100%;">
-                👤 @(_isCharacterLoaded ? _charName : "CHARACTER PROFILE")
+    <!-- RIGHT: character + scene controls -->
+    <div class="character-panel character-panel-right control-rail">
+        <div class="panel-tabs-header">
+            <button class="panel-tab-btn active" type="button">
+                👤 @(_isCharacterLoaded ? _charName : "Character & scene")
             </button>
         </div>
 
-        <!-- CHARACTER SELECTOR AND DISPLAY CONTAINER -->
-        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden;">
-            <!-- CHARACTER SELECTOR DROPDOWN -->
-            <div style="background: #0f172a; border: 1px solid var(--accent-blue); border-radius: 6px; padding: 0.5rem; flex: 0 0 auto;">
-                <label class="form-label" style="font-size: 0.68rem; color: var(--accent-blue); font-weight: 700; margin-bottom: 0.25rem;">📂 SELECT CHARACTER:</label>
-                <div style="display: flex; gap: 0.5rem;">
-                    <CustomSelect Value="@_selectedCharFile" ValueChanged='(val => SelectCharacter(val, autoPlay: true))' Options="_characterDropdownOptions" style="flex: 1;" />
+        <div class="char-stack">
+            <div class="char-selector-card">
+                <label class="form-label form-label-accent">📂 Character</label>
+                <div class="char-selector-row">
+                    <div class="u-flex-1">
+                        <CustomSelect Value="@_selectedCharFile" ValueChanged='(val => SelectCharacter(val, autoPlay: true))' Options="_characterDropdownOptions" />
+                    </div>
                     @if (_isCharacterLoaded)
                     {
-                        <button class="btn btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; white-space: nowrap;" @onclick="ClearCharacter">✕ Clear</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="ClearCharacter">✕ Clear</button>
                     }
                 </div>
             </div>
 
-            @if (!_isCharacterLoaded)
-            {
-                <div class="canvas-fallback" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">
-                    <div class="canvas-avatar-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">👤</div>
-                    <div class="canvas-char-name" style="color: var(--accent-amber); font-weight: 700;">No Character Selected</div>
-                    <div class="canvas-bio" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
-                        Select a character card from the dropdown above to load a character onto the stage.
+            <div class="char-fields char-fields-tabs control-char-fields">
+                <div class="panel-tabs-header char-detail-tabs" role="tablist">
+                    <button type="button" role="tab"
+                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Personality" ? "active" : "") char-detail-tab-personality"
+                            aria-selected="@(_charDetailTab == "Personality")"
+                            disabled="@(!_isCharacterLoaded)"
+                            @onclick='() => _charDetailTab = "Personality"'>
+                        Personality
+                    </button>
+                    <button type="button" role="tab"
+                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Behavior" ? "active" : "") char-detail-tab-behavior"
+                            aria-selected="@(_charDetailTab == "Behavior")"
+                            disabled="@(!_isCharacterLoaded)"
+                            @onclick='() => _charDetailTab = "Behavior"'>
+                        Behavior
+                    </button>
+                    <button type="button" role="tab"
+                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Physical" ? "active" : "") char-detail-tab-physical"
+                            aria-selected="@(_charDetailTab == "Physical")"
+                            disabled="@(!_isCharacterLoaded)"
+                            @onclick='() => _charDetailTab = "Physical"'>
+                        Physical
+                    </button>
+                    <button type="button" role="tab"
+                            class="panel-tab-btn char-detail-tab @(_charDetailTab == "Style" ? "active" : "") char-detail-tab-style"
+                            aria-selected="@(_charDetailTab == "Style")"
+                            disabled="@(!_isCharacterLoaded)"
+                            @onclick='() => _charDetailTab = "Style"'>
+                        Style
+                    </button>
+                </div>
+
+                <div class="char-field char-field-active" role="tabpanel">
+                    @if (!_isCharacterLoaded)
+                    {
+                        <div class="control-empty-hint">
+                            Select a character to edit personality, behavior, physical appearance, and style.
+                        </div>
+                    }
+                    else if (_charDetailTab == "Personality")
+                    {
+                        <textarea
+                            class="char-field-input"
+                            @bind="_charPersonality"
+                            @bind:event="oninput"
+                            placeholder="Who they are — temperament, values, social stance (not body)..."
+                            title="Personality: who they are"></textarea>
+                    }
+                    else if (_charDetailTab == "Behavior")
+                    {
+                        <textarea
+                            class="char-field-input"
+                            @bind="_charBehavior"
+                            @bind:event="oninput"
+                            placeholder="How they act under pressure, trust, and routine (not appearance)..."
+                            title="Behavior: how they act"></textarea>
+                    }
+                    else if (_charDetailTab == "Physical")
+                    {
+                        <textarea
+                            class="char-field-input"
+                            @bind="_charPhysical"
+                            @bind:event="oninput"
+                            placeholder="Body only — height, build, hair, eyes, skin, face, marks, movement..."
+                            title="Physical appearance (body only)"></textarea>
+                    }
+                    else
+                    {
+                        <textarea
+                            class="char-field-input"
+                            @bind="_charStyle"
+                            @bind:event="oninput"
+                            placeholder="How they dress — outfits, accessories, palette, signature items..."
+                            title="Style & accessories: default wardrobe"></textarea>
+                    }
+                </div>
+            </div>
+
+            <div class="scene-controls control-scene-block">
+                <div class="scene-genre-bar">
+                    <label class="scene-genre-label">Genre</label>
+                    <CustomSelect Value="@_selectedGenre" ValueChanged="OnGenreChanged" Options="_genreOptions" class="scene-genre-select" />
+                </div>
+
+                <div class="scene-field scene-field-location">
+                    <div class="section-title section-title-location">
+                        <span>📍</span>
+                        <span>Location &amp; atmosphere</span>
+                    </div>
+                    <textarea
+                        class="form-control scene-location-input"
+                        @bind="_sceneLocationText"
+                        @bind:event="oninput"
+                        @onfocusout="PersistSceneFields"
+                        placeholder="Place, time of day, weather, sensory detail… active scene for roleplay and scene art."
+                        title="Saved to settings. Used when you Play / Send and for Generate Scene Artwork."></textarea>
+                    <div class="scene-location-actions">
+                        <button type="button" class="btn btn-primary btn-block btn-sm" disabled="@_isGeneratingLocation" @onclick="GenerateAiLocationAsync" title="Use AI to generate a vivid location for this genre">
+                            @(_isGeneratingLocation ? "✨ Generating..." : "✨ Generate AI Location")
+                        </button>
+                        <div class="scene-location-actions-row">
+                            <button type="button" class="btn btn-secondary btn-sm" @onclick="ApplyGenrePreset" title="Fill with genre default place">
+                                ⇢ Preset
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" @onclick="PersistSceneFields" title="Save genre + location">
+                                💾 Save
+                            </button>
+                        </div>
                     </div>
                 </div>
-            }
-            else
-            {
-                <div style="flex: 1; min-height: 0; border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a; display: flex; flex-direction: column; gap: 0.45rem; overflow: hidden;">
-                    <!-- CHARACTER IMAGE (Top of right panel with fixed max-height) -->
-                    <div style="flex: 0 0 auto; max-height: 240px; min-height: 140px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); border-radius: 6px; overflow: hidden; padding: 0.25rem;">
-                        @if (!string.IsNullOrEmpty(_charAvatarPath) && (System.IO.File.Exists(_charAvatarPath) || _charAvatarPath.StartsWith("http") || _charAvatarPath.StartsWith("data:")))
-                        {
-                            <img src="@_charAvatarPath" alt="@_charName" style="max-width: 100%; max-height: 230px; object-fit: contain; border-radius: 4px;" />
-                        }
-                        else
-                        {
-                            <div class="canvas-fallback" style="padding: 1rem; text-align: center;">
-                                <div class="canvas-avatar-icon" style="font-size: 2.5rem;">👤</div>
-                                <div class="canvas-char-name" style="margin-top: 0.4rem; font-size: 0.85rem; font-weight: 700;">@_charName @(_charAge > 0 ? $"({_charAge})" : "")</div>
-                            </div>
-                        }
-                    </div>
-
-                    <!-- SEPARATE FIELDS: personality · behavior · physical · style (never one blob) -->
-                    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.35rem; overflow-y: auto;">
-                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.15rem;">🧠 Personality</div>
-                            <textarea
-                                @bind="_charPersonality"
-                                @bind:event="oninput"
-                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
-                                placeholder="Who they are — temperament, values, social stance (not body)..."
-                                title="Personality: who they are"></textarea>
-                        </div>
-
-                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-amber); text-transform: uppercase; margin-bottom: 0.15rem;">🎭 Behavior</div>
-                            <textarea
-                                @bind="_charBehavior"
-                                @bind:event="oninput"
-                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
-                                placeholder="How they act under pressure, trust, and routine (not appearance)..."
-                                title="Behavior: how they act"></textarea>
-                        </div>
-
-                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-green, #34d399); text-transform: uppercase; margin-bottom: 0.15rem;">👤 Physical</div>
-                            <textarea
-                                @bind="_charPhysical"
-                                @bind:event="oninput"
-                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
-                                placeholder="Body only — height, build, hair, eyes, skin, face, marks, movement..."
-                                title="Physical appearance (body only)"></textarea>
-                        </div>
-
-                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 0.15rem;">👗 Style &amp; Accessories</div>
-                            <textarea
-                                @bind="_charStyle"
-                                @bind:event="oninput"
-                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
-                                placeholder="How they dress — outfits, accessories, palette, signature items..."
-                                title="Character style / clothing defaults"></textarea>
-                        </div>
-                    </div>
-
-                    <!-- GENERATE PORTRAIT BUTTON (body + dress only) -->
-                    <button class="btn btn-secondary" style="width: 100%; font-size: 0.7rem; padding: 0.3rem; justify-content: center; flex: 0 0 auto;" @onclick="() => OpenGeneratePortraitModal(BuildPortraitAppearance(), _selectedCharFile)">✨ Generate Portrait</button>
-                </div>
-            }
+            </div>
         </div>
     </div>
 
@@ -290,6 +309,8 @@
 
 @code {
     private string _centerTab = "Dialogue";
+    /// <summary>Active identity field tab: Personality | Behavior | Physical | Style</summary>
+    private string _charDetailTab = "Personality";
     private bool _showGeneratePortraitModal = false;
     private string _portraitAppearance = "";
     private string _portraitCardFile = "";
@@ -353,12 +374,15 @@
                 artStyleId: artStyleId,
                 applyArtStyle: false);
 
+            await ApplySceneBackdropAsync(_sceneImagePath);
+
             _outputLogs.Add(new LogEntryModel
             {
                 Timestamp = DateTime.Now,
                 Message = $"Scene art · {SceneGenreCatalog.GetById(_selectedGenre).DisplayName} · " +
                           $"style {ImageArtStyleCatalog.GetById(artStyleId).DisplayName}" +
-                          (_isCharacterLoaded ? $" · with {_charName}" : " · environment only"),
+                          (_isCharacterLoaded ? $" · with {_charName}" : " · environment only") +
+                          " · app backdrop updated",
                 LevelClass = "log-success"
             });
         }
@@ -375,6 +399,46 @@
         {
             _isGeneratingScene = false;
             StateHasChanged();
+        }
+    }
+
+    /// <summary>Soft full-app atmosphere from the current scene still.</summary>
+    private async Task ApplySceneBackdropAsync(string? imageUrl)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl) ||
+                (!imageUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
+                 !imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
+                 !System.IO.File.Exists(imageUrl)))
+            {
+                await JS.InvokeVoidAsync("csTheme.setSceneBackdrop", "");
+                return;
+            }
+
+            // Local file paths need a data URI for CSS background-image
+            string cssUrl = imageUrl;
+            if (!imageUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
+                !imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
+                System.IO.File.Exists(imageUrl))
+            {
+                try
+                {
+                    byte[] bytes = await System.IO.File.ReadAllBytesAsync(imageUrl);
+                    string mime = imageUrl.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+                    cssUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+                }
+                catch
+                {
+                    cssUrl = "";
+                }
+            }
+
+            await JS.InvokeVoidAsync("csTheme.setSceneBackdrop", cssUrl ?? "");
+        }
+        catch
+        {
+            // Backdrop is cosmetic — never break scene generation
         }
     }
 
@@ -666,9 +730,10 @@
         try
         {
             // Imaging uses body + dress only — never personality/behavior
-            string prompt = CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(physical, characterStyle);
+            string prompt = CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(
+                physical, characterStyle, _charName);
             if (string.IsNullOrWhiteSpace(prompt))
-                prompt = "Character portrait";
+                prompt = string.IsNullOrWhiteSpace(_charName) ? "solo character portrait" : $"{_charName}, solo character portrait";
 
             string portraitUri = await CharacterSimulator.Logic.Services.CharacterPortraitService.EnsurePortraitAsync(
                 cardId, prompt, generateIfMissing: true);
@@ -1007,7 +1072,7 @@
     }
 
     private string BuildPortraitAppearance() =>
-        CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(_charPhysical, _charStyle);
+        CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(_charPhysical, _charStyle, _charName);
 
     private void OpenGeneratePortraitModal(string appearance, string cardFileName)
     {

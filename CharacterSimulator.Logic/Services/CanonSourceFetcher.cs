@@ -24,7 +24,7 @@ public static class CanonSourceFetcher
         };
         // Wikipedia requires a descriptive User-Agent
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
-            "CharacterSimulator/1.0 (local desktop; derive-card; educational)");
+            "Simulacra/1.0 (CharacterSimulator host; derive-card; educational)");
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return client;
     }

@@ -1,6 +1,8 @@
 @inject TurnControlContext ControlContext
+@inject IJSRuntime JS
 @using System.Linq
 @using CharacterSimulator.Logic.Services
+@using Microsoft.AspNetCore.Components.Web
 
 <div class="modal-overlay">
     <div class="modal-card" style="width: 580px;">
@@ -130,27 +132,38 @@
 
             @if (ActiveSection == "Theme")
             {
-                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Select your preferred visual aesthetic for the Blazor application UI.</p>
-                <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 280px; overflow-y: auto; padding-right: 0.25rem;">
+                <p class="theme-picker-intro">Choose a full chrome theme. Previews show canvas, panels, accent, and danger so you can compare before applying.</p>
+                <div class="theme-picker-list">
                     @foreach (var theme in ThemeCatalog.All)
                     {
-                        <div class="theme-card-option" 
-                             @onclick="() => SelectTheme(theme.Id)" 
-                             style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid @(_selectedTheme == theme.Id ? "var(--accent-blue)" : "var(--border-color)"); background: @(_selectedTheme == theme.Id ? "rgba(56, 189, 248, 0.08)" : "var(--bg-card)"); cursor: pointer; transition: all 0.2s ease;">
-                            <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                <span style="font-size: 1.2rem;">@theme.Icon</span>
-                                <div>
-                                    <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">@theme.DisplayName</div>
-                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">@theme.Description</div>
+                        var selected = _selectedTheme == theme.Id;
+                        <div class="theme-card-option @(selected ? "selected" : null)"
+                             @onclick="() => SelectTheme(theme.Id)"
+                             role="button"
+                             tabindex="0"
+                             @onkeydown="(e) => OnThemeKey(e, theme.Id)">
+                            <div class="theme-card-preview" style="background: @theme.Surface0;">
+                                <div class="theme-preview-chrome" style="background: @theme.Surface2;"></div>
+                                <div class="theme-preview-body" style="background: @theme.Surface1;">
+                                    <div class="theme-preview-bar" style="background: @theme.AccentColor;"></div>
+                                    <div class="theme-preview-bar short" style="background: @theme.Surface2;"></div>
+                                    <div class="theme-preview-btn" style="background: @theme.AccentColor;"></div>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                <div style="width: 14px; height: 14px; border-radius: 50%; background: @theme.AccentColor; border: 1px solid rgba(255,255,255,0.2);"></div>
-                                @if (_selectedTheme == theme.Id)
-                                {
-                                    <span style="color: var(--accent-blue); font-weight: 700;">✓</span>
-                                }
+                            <div class="theme-card-meta">
+                                <div class="theme-card-title">
+                                    <span>@theme.Icon</span>
+                                    <span>@theme.DisplayName</span>
+                                </div>
+                                <div class="theme-card-desc">@theme.Description</div>
+                                <div class="theme-card-swatches">
+                                    <span class="theme-swatch" style="background: @theme.Surface0;" title="Canvas"></span>
+                                    <span class="theme-swatch" style="background: @theme.Surface1;" title="Panel"></span>
+                                    <span class="theme-swatch" style="background: @theme.AccentColor;" title="Accent"></span>
+                                    <span class="theme-swatch" style="background: @theme.DangerColor;" title="Danger"></span>
+                                </div>
                             </div>
+                            <div class="theme-card-check">@(selected ? "✓" : "")</div>
                         </div>
                     }
                 </div>
@@ -499,8 +512,28 @@
 
     private void SelectTheme(string themeId)
     {
-        _selectedTheme = themeId;
+        _selectedTheme = ThemeCatalog.GetById(themeId).Id;
         SaveCurrentSettings();
+        // Live-apply so Setup preview matches chrome immediately
+        _ = ApplyThemeLiveAsync(_selectedTheme);
+    }
+
+    private void OnThemeKey(KeyboardEventArgs e, string themeId)
+    {
+        if (e.Key is "Enter" or " ")
+            SelectTheme(themeId);
+    }
+
+    private async Task ApplyThemeLiveAsync(string themeId)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("csTheme.apply", themeId);
+        }
+        catch
+        {
+            // theme.js may not be ready in rare boot races
+        }
     }
 
     private void SaveCurrentSettings()

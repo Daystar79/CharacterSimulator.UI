@@ -40,7 +40,7 @@ public class AiImageGeneratorService
     static AiImageGeneratorService()
     {
         Http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
-            "CharacterSimulator/1.0 (portrait; desktop)");
+            "Simulacra/1.0 (CharacterSimulator host; portrait)");
     }
 
     public static Task<string> GeneratePortraitAsync(
@@ -179,11 +179,15 @@ public class AiImageGeneratorService
     private static async Task<PortraitGenerationResult> GenerateWithPollinationsAsync(
         string prompt, string localPath, string modelId, CancellationToken ct)
     {
-        // Prompt is expected to already include art-style cues from GeneratePortraitDetailedAsync.
-        string cleanPrompt = Uri.EscapeDataString(prompt);
+        // Keep subject readable inside URL length limits (appearance already first in ApplyPortraitStyle).
+        string subject = CapPollinationsPrompt(prompt);
+        string cleanPrompt = Uri.EscapeDataString(subject);
         string modelQ = string.IsNullOrWhiteSpace(modelId) ? "flux" : Uri.EscapeDataString(modelId);
+        // enhance=false: do not let the service rewrite away physical details.
+        // Safe seed + nologo for clean friend-test portraits.
         string imageUrl =
-            $"https://image.pollinations.ai/prompt/{cleanPrompt}?width=512&height=512&nologo=true&model={modelQ}&seed={Random.Shared.Next(1, 999999)}";
+            $"https://image.pollinations.ai/prompt/{cleanPrompt}" +
+            $"?width=768&height=768&nologo=true&enhance=false&model={modelQ}&seed={Random.Shared.Next(1, 999999)}";
 
         try
         {
@@ -210,6 +214,24 @@ public class AiImageGeneratorService
             ImageBytes = null,
             MimeType = "image/jpeg"
         };
+    }
+
+    /// <summary>
+    /// Pollinations encodes the full prompt in the path. Cap roughly so gateways do not
+    /// truncate mid-description (prefer keeping the start, where appearance lives).
+    /// </summary>
+    private static string CapPollinationsPrompt(string prompt, int maxChars = 900)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+            return "solo character portrait";
+        string p = prompt.Trim();
+        if (p.Length <= maxChars)
+            return p;
+        // Cut at last comma/space before limit so we don't bisect a feature token
+        int cut = p.LastIndexOfAny(new[] { ',', ';', '.' }, maxChars - 1);
+        if (cut < maxChars / 2)
+            cut = maxChars;
+        return p[..cut].TrimEnd(',', ';', '.', ' ') + ", detailed character design";
     }
 
     private static async Task<PortraitGenerationResult> GenerateWithStableDiffusionWebUIAsync(

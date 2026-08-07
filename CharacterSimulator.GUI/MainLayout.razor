@@ -58,7 +58,7 @@
                         <span>@theme.DisplayName</span>
                         @if (_activeThemeId == theme.Id)
                         {
-                            <span style="margin-left: auto; color: var(--accent-green);">✓</span>
+                            <span class="theme-check">✓</span>
                         }
                     </div>
                 }
@@ -71,7 +71,7 @@
         <div class="toolbar-left">
             <div class="app-badge-title">
                 <div class="icon-box">🎭</div>
-                <span>CHARACTER SIMULATOR</span>
+                <span>SIMULACRA</span>
             </div>
             <span class="badge @StatusBadgeClass">● @_statusBadgeText</span>
             <span class="badge badge-profile">👤 @_activeProfileBadge</span>
@@ -79,12 +79,12 @@
         </div>
 
         <div class="toolbar-right">
-            <button class="btn btn-secondary" style="border: 1px solid var(--accent-blue); color: var(--accent-blue);" @onclick="TriggerRefreshUI">🔄 Refresh UI</button>
+            <button class="btn btn-accent-outline" @onclick="TriggerRefreshUI">🔄 Refresh UI</button>
             <button class="btn btn-success" disabled="@_isPlaying" @onclick="PlaySimulation">▶ Play</button>
 
             <div class="menu-item" style="padding: 0;">
                 <button class="btn btn-secondary">⚙️ Controls ▾</button>
-                <div class="menu-dropdown" style="right: 0; left: auto;">
+                <div class="menu-dropdown menu-dropdown-end">
                     <div class="dropdown-action" @onclick="PauseSimulation">⏸ Pause Simulation</div>
                     <div class="dropdown-action" @onclick="StepSimulation">⏭ Step (Single Turn)</div>
                     <div class="dropdown-divider"></div>
@@ -92,12 +92,12 @@
                 </div>
             </div>
 
-            <div style="height: 18px; width: 1px; background: var(--border-color); margin: 0 0.25rem;"></div>
+            <div class="toolbar-divider"></div>
 
-            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem;">
-                <span style="color: var(--text-secondary);">⚡ Delay:</span>
-                <span style="color: var(--accent-amber); font-weight: 700;">@(_delayMs)ms</span>
-                <input type="range" min="100" max="3000" step="50" value="@_delayMs" @oninput="OnDelayChanged" style="width: 80px;" />
+            <div class="toolbar-delay">
+                <span class="toolbar-delay-label">⚡ Delay:</span>
+                <span class="toolbar-delay-value">@(_delayMs)ms</span>
+                <input type="range" min="100" max="3000" step="50" value="@_delayMs" @oninput="OnDelayChanged" />
             </div>
         </div>
     </div>
@@ -237,7 +237,7 @@
             {
                 var theme = ControlContext.CurrentSettings?.UiTheme ?? ThemeCatalog.DefaultThemeId;
                 _activeThemeId = ThemeCatalog.GetById(theme).Id;
-                _ = JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{_activeThemeId}')");
+                _ = JS.InvokeVoidAsync("csTheme.apply", _activeThemeId);
             }
             catch { }
         }
@@ -263,7 +263,7 @@
         _activeThemeId = ThemeCatalog.GetById(themeId).Id;
         try
         {
-            await JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{_activeThemeId}')");
+            await JS.InvokeVoidAsync("csTheme.apply", _activeThemeId);
             var s = ControlContext.CurrentSettings ?? AppConfigService.LoadSettings();
             s.UiTheme = _activeThemeId;
             ControlContext.UpdateSettings(s);
@@ -345,7 +345,7 @@
             _activeThemeId = ThemeCatalog.GetById(settings.UiTheme).Id;
             try
             {
-                _ = JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{_activeThemeId}')");
+                _ = JS.InvokeVoidAsync("csTheme.apply", _activeThemeId);
             }
             catch { }
         }

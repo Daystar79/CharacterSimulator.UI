@@ -155,12 +155,12 @@
                 try
                 {
                     var info = CharacterCatalog.LoadCardDetails(_selectedCharacterFile);
-                    _prompt = CardFieldFormatter.BuildImagingPrompt(info.Physical, info.CharacterStyle);
+                    _prompt = CardFieldFormatter.BuildImagingPrompt(info.Physical, info.CharacterStyle, info.Name);
                 }
                 catch { }
             }
             if (string.IsNullOrEmpty(_prompt))
-                _prompt = "Character portrait, high quality detailed artwork";
+                _prompt = "solo character portrait, detailed appearance";
         }
 
         // Component is created fresh each time Index opens the modal (@if) —
@@ -222,15 +222,15 @@
             try
             {
                 var info = CharacterCatalog.LoadCardDetails(fileName);
-                _prompt = CardFieldFormatter.BuildImagingPrompt(info.Physical, info.CharacterStyle);
+                _prompt = CardFieldFormatter.BuildImagingPrompt(info.Physical, info.CharacterStyle, info.Name);
                 
                 // If still empty, use a default
                 if (string.IsNullOrEmpty(_prompt))
-                    _prompt = "Character portrait, high quality detailed artwork";
+                    _prompt = "solo character portrait, detailed appearance";
             }
             catch
             {
-                _prompt = "Character portrait, high quality detailed artwork";
+                _prompt = "solo character portrait, detailed appearance";
             }
         }
         

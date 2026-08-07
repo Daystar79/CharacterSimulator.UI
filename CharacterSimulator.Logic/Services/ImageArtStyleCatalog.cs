@@ -85,21 +85,63 @@ public static class ImageArtStyleCatalog
     }
 
     /// <summary>
-    /// Merge subject prompt with the selected art style for a character portrait.
-    /// Prepends the style cue to the front so AI image generators (Pollinations, SD, Flux)
-    /// prioritize the art style directive.
+    /// Merge subject appearance with art style for a character portrait.
+    /// <b>Appearance comes first</b> — URL-based generators (Pollinations/Flux) weight early
+    /// tokens heavily; burying physical description after a long style preamble causes drift.
     /// </summary>
     public static string ApplyPortraitStyle(string? prompt, string? artStyleId)
     {
         var style = GetById(artStyleId);
-        string p = (prompt ?? "").Trim();
+        string p = SanitizeAppearancePrompt(prompt);
         if (string.IsNullOrEmpty(p))
-            return style.PortraitCue;
+            return $"solo character portrait, centered, {style.PortraitCue}, no text, no watermark";
 
-        if (p.StartsWith(style.PortraitCue, StringComparison.OrdinalIgnoreCase))
+        // Already fully assembled
+        if (p.Contains(style.PortraitCue, StringComparison.OrdinalIgnoreCase) &&
+            p.Contains("portrait", StringComparison.OrdinalIgnoreCase))
             return p;
 
-        return $"{style.PortraitCue}. Subject details: {p}";
+        // Appearance-first binding (do not lead with style-only cues)
+        return $"solo character portrait of this exact person: {p}. " +
+               $"Match hair, eyes, skin, face, build, and clothing from the description. " +
+               $"Single character only. Art style: {style.PortraitCue}. " +
+               "No text, no watermark, no extra people.";
+    }
+
+    /// <summary>
+    /// Build the subject string for portrait gen from card fields (physical + dress only).
+    /// </summary>
+    public static string BuildPortraitSubject(string? name, string? physical, string? characterStyle)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(name) &&
+            !name.Contains("No Character", StringComparison.OrdinalIgnoreCase) &&
+            !name.Contains("Unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add(name.Trim());
+        }
+
+        string body = SanitizeAppearancePrompt(physical);
+        if (!string.IsNullOrEmpty(body))
+            parts.Add(body);
+
+        string dress = SanitizeAppearancePrompt(characterStyle);
+        if (!string.IsNullOrEmpty(dress))
+            parts.Add("wearing " + dress);
+
+        return string.Join(", ", parts);
+    }
+
+    /// <summary>Strip noise that dilutes image-gen prompts (system labels, personality leaks).</summary>
+    public static string SanitizeAppearancePrompt(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        string p = raw.Trim();
+        // Collapse whitespace / newlines into commas for URL models
+        p = System.Text.RegularExpressions.Regex.Replace(p, @"[\r\n]+", ", ");
+        p = System.Text.RegularExpressions.Regex.Replace(p, @"\s{2,}", " ");
+        p = System.Text.RegularExpressions.Regex.Replace(p, @",\s*,+", ", ");
+        return p.Trim(' ', ',', ';');
     }
 
     /// <summary>
