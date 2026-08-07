@@ -105,6 +105,9 @@ public static class ImageArtStyleCatalog
     /// <summary>
     /// Scene art: environment + optional character appearance, same art style as portraits.
     /// </summary>
+    /// <summary>
+    /// Scene art: environment + optional character appearance, same art style as portraits.
+    /// </summary>
     public static string BuildScenePrompt(
         string? scenePlaceOrContext,
         string? characterName,
@@ -118,24 +121,26 @@ public static class ImageArtStyleCatalog
             : scenePlaceOrContext.Trim();
 
         // Cap length for URL-based generators (Pollinations).
-        place = Truncate(place, 400);
+        place = Truncate(place, 300);
 
         var sb = new StringBuilder();
         sb.Append(style.SceneCue);
-        sb.Append(". Wide establishing shot of location, environmental storytelling, ");
-        sb.Append("no text, no watermark, no UI. Location and atmosphere: ");
-        sb.Append(place);
 
         string appearance = FirstNonEmpty(characterPhysical, characterDescription);
         if (!string.IsNullOrWhiteSpace(appearance))
         {
-            appearance = Truncate(appearance!, 280);
+            appearance = Truncate(appearance!, 220);
             string who = string.IsNullOrWhiteSpace(characterName) ? "a character" : characterName.Trim();
-            sb.Append(". Include ");
+            sb.Append(". Featuring ");
             sb.Append(who);
-            sb.Append(" in scene (full or mid figure, matching style), appearance: ");
+            sb.Append(" standing in scene (full or mid figure, ");
             sb.Append(appearance);
+            sb.Append(")");
         }
+
+        sb.Append(". Location and setting: ");
+        sb.Append(place);
+        sb.Append(". Wide shot, environmental storytelling, no text, no watermark, no UI.");
 
         return sb.ToString();
     }

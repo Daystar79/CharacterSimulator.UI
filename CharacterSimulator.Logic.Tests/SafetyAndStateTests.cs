@@ -1,10 +1,12 @@
 using Xunit;
 using CharacterSimulator.Logic;
 using CharacterSimulator.Logic.Safety;
+using CharacterSimulator.Logic.Services;
 using CharacterSimulator.Logic.State;
 
 namespace CharacterSimulator.Logic.Tests;
 
+[Collection("GlobalState")]
 public class SafetyAndStateTests
 {
     [Fact]
@@ -56,7 +58,6 @@ public class SafetyAndStateTests
     [Fact]
     public void AdultAuth_IsUserAdultAttested_DefaultFalse()
     {
-        // Reset to default state
         AdultAuth.SetUserAdultAttested(false);
         Assert.False(AdultAuth.IsUserAdultAttested);
     }

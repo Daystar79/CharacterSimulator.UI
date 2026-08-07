@@ -34,6 +34,11 @@ public class AppSettings
     /// Shared visual style for portraits and scene art (see ImageArtStyleCatalog ids: anime, photoreal, …).
     /// </summary>
     public string ImageArtStyle { get; set; } = Services.ImageArtStyleCatalog.DefaultStyleId;
+
+    /// <summary>
+    /// UI Theme preset (midnight, cyberpunk, matrix, amber, obsidian).
+    /// </summary>
+    public string UiTheme { get; set; } = Services.ThemeCatalog.DefaultThemeId;
 }
 
 public static class AppConfigService
@@ -116,6 +121,15 @@ public static class AppConfigService
         catch
         {
             settings.ImageArtStyle = Services.ImageArtStyleCatalog.DefaultStyleId;
+        }
+
+        try
+        {
+            settings.UiTheme = Services.ThemeCatalog.GetById(settings.UiTheme).Id;
+        }
+        catch
+        {
+            settings.UiTheme = Services.ThemeCatalog.DefaultThemeId;
         }
     }
 

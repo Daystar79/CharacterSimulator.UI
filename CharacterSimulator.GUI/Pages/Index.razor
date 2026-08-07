@@ -213,31 +213,51 @@
             }
             else
             {
-                <div style="flex: 1; min-height: 0; border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a; display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden;">
-                    <!-- CHARACTER IMAGE (Fills remainder of vertical space) -->
-                    <div style="flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); border-radius: 6px; overflow: hidden; padding: 0.25rem;">
+                <div style="flex: 1; min-height: 0; border: 1px solid var(--border-highlight); border-radius: 6px; padding: 0.6rem; background: #0f172a; display: flex; flex-direction: column; gap: 0.45rem; overflow: hidden;">
+                    <!-- CHARACTER IMAGE (Top of right panel with fixed max-height) -->
+                    <div style="flex: 0 0 auto; max-height: 240px; min-height: 140px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); border-radius: 6px; overflow: hidden; padding: 0.25rem;">
                         @if (!string.IsNullOrEmpty(_charAvatarPath) && (System.IO.File.Exists(_charAvatarPath) || _charAvatarPath.StartsWith("http") || _charAvatarPath.StartsWith("data:")))
                         {
-                            <img src="@_charAvatarPath" alt="@_charName" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;" />
+                            <img src="@_charAvatarPath" alt="@_charName" style="max-width: 100%; max-height: 230px; object-fit: contain; border-radius: 4px;" />
                         }
                         else
                         {
                             <div class="canvas-fallback" style="padding: 1rem; text-align: center;">
-                                <div class="canvas-avatar-icon" style="font-size: 3rem;">👤</div>
-                                <div class="canvas-char-name" style="margin-top: 0.5rem; font-size: 0.9rem; font-weight: 700;">@_charName @(_charAge > 0 ? $"({_charAge})" : "")</div>
+                                <div class="canvas-avatar-icon" style="font-size: 2.5rem;">👤</div>
+                                <div class="canvas-char-name" style="margin-top: 0.4rem; font-size: 0.85rem; font-weight: 700;">@_charName @(_charAge > 0 ? $"({_charAge})" : "")</div>
                             </div>
                         }
                     </div>
 
-                    <!-- CHARACTER DESCRIPTION -->
-                    <div style="flex: 0 0 110px; display: flex; flex-direction: column; min-height: 0;">
-                        <div style="font-size: 0.68rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.2rem;">📖 DESCRIPTION</div>
-                        <textarea 
-                            @bind="_charDescription" 
-                            @bind:event="oninput"
-                            style="flex: 1; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
-                            placeholder="Click to edit description..."
-                            title="Click to edit character description"></textarea>
+                    <!-- EXPANDED EDITABLE TEXT SECTIONS: DESCRIPTION & CLOTHING -->
+                    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+                        <!-- CHARACTER DESCRIPTION (Expands) -->
+                        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;">
+                                <span>📖</span>
+                                <span>DESCRIPTION</span>
+                            </div>
+                            <textarea 
+                                @bind="_charDescription" 
+                                @bind:event="oninput"
+                                style="flex: 1; min-height: 0; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
+                                placeholder="Click to edit character biography and traits..."
+                                title="Click to edit character description"></textarea>
+                        </div>
+
+                        <!-- CLOTHING & ACCESSORIES (Expands) -->
+                        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;">
+                                <span>👗</span>
+                                <span>CLOTHING &amp; ACCESSORIES</span>
+                            </div>
+                            <textarea 
+                                @bind="_charPhysical" 
+                                @bind:event="oninput"
+                                style="flex: 1; min-height: 0; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
+                                placeholder="Attire, clothing style, armor, jewelry, or signature items..."
+                                title="Click to edit clothing and accessories"></textarea>
+                        </div>
                     </div>
 
                     <!-- GENERATE PORTRAIT BUTTON -->
@@ -579,6 +599,12 @@
                 _ = AutoEnsurePortraitAsync(cardId, info.Physical, info.Description);
             }
 
+            // Auto-render / update scene artwork with character presence if missing or on selection
+            if (string.IsNullOrEmpty(_sceneImagePath))
+            {
+                _ = AutoEnsureSceneArtworkAsync();
+            }
+
             StateHasChanged();
         }
         catch (Exception ex)
@@ -638,6 +664,21 @@
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Index] Auto ensure portrait failed: {ex.Message}");
+        }
+    }
+
+    private async Task AutoEnsureSceneArtworkAsync()
+    {
+        if (_isGeneratingScene || !string.IsNullOrEmpty(_sceneImagePath))
+            return;
+
+        try
+        {
+            await GenerateSceneArtwork();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Index] Auto ensure scene artwork failed: {ex.Message}");
         }
     }
 
@@ -732,6 +773,11 @@
         {
             _selectedGenre = SceneGenreCatalog.DefaultGenreId;
             _sceneLocationText = SceneGenreCatalog.DefaultSceneFor(_selectedGenre);
+        }
+
+        if (string.IsNullOrEmpty(_sceneImagePath))
+        {
+            _ = AutoEnsureSceneArtworkAsync();
         }
     }
 

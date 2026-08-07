@@ -17,6 +17,9 @@
                 <button class="panel-tab-btn @(ActiveSection == "Imaging" ? "active" : "")" @onclick='() => ActiveSection = "Imaging"'>
                     🎨 IMAGING SETTINGS
                 </button>
+                <button class="panel-tab-btn @(ActiveSection == "Theme" ? "active" : "")" @onclick='() => ActiveSection = "Theme"'>
+                    ✨ UI THEME
+                </button>
             </div>
 
             @if (ActiveSection == "Roleplaying")
@@ -125,6 +128,34 @@
                 </div>
             }
 
+            @if (ActiveSection == "Theme")
+            {
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Select your preferred visual aesthetic for the Blazor application UI.</p>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 280px; overflow-y: auto; padding-right: 0.25rem;">
+                    @foreach (var theme in ThemeCatalog.All)
+                    {
+                        <div class="theme-card-option" 
+                             @onclick="() => SelectTheme(theme.Id)" 
+                             style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid @(_selectedTheme == theme.Id ? "var(--accent-blue)" : "var(--border-color)"); background: @(_selectedTheme == theme.Id ? "rgba(56, 189, 248, 0.08)" : "var(--bg-card)"); cursor: pointer; transition: all 0.2s ease;">
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="font-size: 1.2rem;">@theme.Icon</span>
+                                <div>
+                                    <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">@theme.DisplayName</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">@theme.Description</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <div style="width: 14px; height: 14px; border-radius: 50%; background: @theme.AccentColor; border: 1px solid rgba(255,255,255,0.2);"></div>
+                                @if (_selectedTheme == theme.Id)
+                                {
+                                    <span style="color: var(--accent-blue); font-weight: 700;">✓</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
             @if (!string.IsNullOrEmpty(_detectionStatus))
             {
                 <div style="font-size: 0.68rem; color: var(--accent-green); font-weight: 600; margin-top: 0.4rem;">@_detectionStatus</div>
@@ -195,6 +226,7 @@
     private string _selectedImageEngine = ImageEngineDetector.DefaultEngineId;
     private string _selectedImageModel = "flux";
     private string _imageResolution = "512x512";
+    private string _selectedTheme = ThemeCatalog.DefaultThemeId;
     private double _temperature = 0.7;
     private int _maxTokens = 1024;
     private string _detectionStatus = "";
@@ -223,6 +255,9 @@
                 ? "flux"
                 : saved.ImageModelIdentifier;
             _imageResolution = saved.ImageResolution;
+            _selectedTheme = string.IsNullOrWhiteSpace(saved.UiTheme)
+                ? ThemeCatalog.DefaultThemeId
+                : saved.UiTheme;
         }
 
         // Populate both tabs without forcing agent image probes on every open (faster).
@@ -462,6 +497,12 @@
         OnClosed.InvokeAsync(true);
     }
 
+    private void SelectTheme(string themeId)
+    {
+        _selectedTheme = themeId;
+        SaveCurrentSettings();
+    }
+
     private void SaveCurrentSettings()
     {
         var settings = new AppSettings
@@ -477,7 +518,8 @@
             MaxTokens = _maxTokens,
             ImageEngine = _selectedImageEngine,
             ImageModelIdentifier = _selectedImageModel,
-            ImageResolution = _imageResolution
+            ImageResolution = _imageResolution,
+            UiTheme = _selectedTheme
         };
         ControlContext.UpdateSettings(settings);
     }

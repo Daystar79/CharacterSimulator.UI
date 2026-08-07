@@ -48,6 +48,22 @@
                 <div class="dropdown-action" @onclick="StopSimulation">⏹ Stop</div>
             </div>
         </div>
+        <div class="menu-item">
+            <span>🎨 Theme</span>
+            <div class="menu-dropdown">
+                @foreach (var theme in ThemeCatalog.All)
+                {
+                    <div class="dropdown-action" @onclick="() => SwitchTheme(theme.Id)">
+                        <span>@theme.Icon</span>
+                        <span>@theme.DisplayName</span>
+                        @if (_activeThemeId == theme.Id)
+                        {
+                            <span style="margin-left: auto; color: var(--accent-green);">✓</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
     </div>
 
     <!-- 2. PLAYBACK TOOLBAR -->
@@ -211,8 +227,21 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private string _activeThemeId = ThemeCatalog.DefaultThemeId;
+
     protected override void OnAfterRender(bool firstRender)
     {
+        if (firstRender)
+        {
+            try
+            {
+                var theme = ControlContext.CurrentSettings?.UiTheme ?? ThemeCatalog.DefaultThemeId;
+                _activeThemeId = ThemeCatalog.GetById(theme).Id;
+                _ = JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{_activeThemeId}')");
+            }
+            catch { }
+        }
+
         if (!firstRender || _profileHooked) return;
         _profileHooked = true;
         try
@@ -227,6 +256,20 @@
             _statusText = "Profile DB delayed: " + ex.Message;
             StateHasChanged();
         }
+    }
+
+    private async Task SwitchTheme(string themeId)
+    {
+        _activeThemeId = ThemeCatalog.GetById(themeId).Id;
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{_activeThemeId}')");
+            var s = ControlContext.CurrentSettings ?? AppConfigService.LoadSettings();
+            s.UiTheme = _activeThemeId;
+            ControlContext.UpdateSettings(s);
+        }
+        catch { }
+        StateHasChanged();
     }
 
     private void TriggerRefreshUI()
@@ -297,6 +340,15 @@
         _activeModeBadge = settings.RoleplayMode == "AutoPlay" ? "🤖 Auto-Play" : "🎮 Player-Guided";
         _activeLlmInfo = $"Roleplay: {settings.RoleplayLlmProvider} ({settings.RoleplayModelIdentifier}) | Image: {settings.ImageEngine}";
         _statusText = $"Active Engine: {settings.RoleplayLlmProvider} ({settings.RoleplayModelIdentifier}) / {settings.ImageEngine}";
+        if (!string.IsNullOrEmpty(settings.UiTheme) && settings.UiTheme != _activeThemeId)
+        {
+            _activeThemeId = ThemeCatalog.GetById(settings.UiTheme).Id;
+            try
+            {
+                _ = JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{_activeThemeId}')");
+            }
+            catch { }
+        }
         StateHasChanged();
     }
 
