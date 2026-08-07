@@ -453,6 +453,9 @@
 
             SimHost.SetStagedCharacter(fileName);
 
+            // Save the selected character to settings so it auto-loads next time
+            SaveSelectedCharacter(fileName);
+
             _outputLogs.Add(new LogEntryModel
             {
                 Timestamp = DateTime.Now,
@@ -538,6 +541,10 @@
         _charGoals = new();
         _charSkills = new();
         SimHost.SetStagedCharacter("");
+        
+        // Clear the saved character selection
+        SaveSelectedCharacter("");
+        
         _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = "Character removed from stage.", LevelClass = "log-info" });
         StateHasChanged();
     }
@@ -839,6 +846,26 @@
         _outputLogs.Clear();
         _outputLogs.Add(new LogEntryModel { Timestamp = DateTime.Now, Message = "Log cleared by user.", LevelClass = "log-info" });
         RequestScrollPanels();
+    }
+
+    private void SaveSelectedCharacter(string fileName)
+    {
+        try
+        {
+            var settings = ControlContext.CurrentSettings ?? AppConfigService.LoadSettings();
+            settings.SelectedCharA = fileName;
+            AppConfigService.SaveSettings(settings);
+            ControlContext.UpdateSettings(settings);
+        }
+        catch (Exception ex)
+        {
+            _outputLogs.Add(new LogEntryModel
+            {
+                Timestamp = DateTime.Now,
+                Message = $"Failed to save selected character: {ex.Message}",
+                LevelClass = "log-error"
+            });
+        }
     }
 
     public record GoalItem(string Name, string Description);
