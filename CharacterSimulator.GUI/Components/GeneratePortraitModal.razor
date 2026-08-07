@@ -304,15 +304,22 @@
     private async Task OnEngineChanged(string val)
     {
         _selectedEngine = val;
-        PersistImagingChoice();
         await LoadModelOptionsAsync();
 
         // When switching engines, pick that engine's default model if current isn't listed
         if (!_modelOptions.Any(o => o.Value.Equals(_selectedModel, StringComparison.OrdinalIgnoreCase)))
         {
-            _selectedModel = _modelOptions.FirstOrDefault()?.Value ?? _selectedModel;
-            PersistImagingChoice();
+            // Try to get the default model for this engine
+            string defaultModel = await ImageModelFetcher.GetDefaultModelIdAsync(_selectedEngine);
+            if (!_modelOptions.Any(o => o.Value.Equals(defaultModel, StringComparison.OrdinalIgnoreCase)))
+            {
+                defaultModel = _modelOptions.FirstOrDefault()?.Value ?? "flux";
+            }
+            _selectedModel = defaultModel;
         }
+
+        // Persist both engine and model after model selection is complete
+        PersistImagingChoice();
 
         StateHasChanged();
     }
