@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
+// CardFieldFormatter lives in CharacterSimulator.Logic
 namespace CharacterSimulator.Logic.Data.Db;
 
 /// <summary>
@@ -276,10 +277,9 @@ public class CharacterCatalogRepository
                 age = a.GetInt32();
             if (root.TryGetProperty("canon_adult", out var ca))
                 canonAdult = ca.ValueKind != JsonValueKind.False;
-            if (root.TryGetProperty("cultural_bias", out var cb))
-                description = cb.GetString()?.Trim() ?? "";
-            if (root.TryGetProperty("physical", out var p) && p.ValueKind == JsonValueKind.String)
-                physical = p.GetString()?.Trim() ?? "";
+            // Index "description" = personality (who they are), never physical body text
+            description = CardFieldFormatter.ReadPersonality(root);
+            physical = CardFieldFormatter.FlattenPhysical(root);
             if (root.TryGetProperty("derived", out var d) && d.ValueKind == JsonValueKind.True)
                 isDerived = true;
             if (root.TryGetProperty("source_label", out var sl))
@@ -297,8 +297,9 @@ public class CharacterCatalogRepository
                 : (string.IsNullOrEmpty(cardId) ? "Unnamed Character" : $"Unnamed ({cardId})");
         }
 
+        // Do not fall physical into description — keep fields independent
         if (string.IsNullOrWhiteSpace(description))
-            description = Truncate(physical, 200);
+            description = "";
 
         string physicalShort = Truncate(physical, 160);
         string avatar = ResolveAvatarForIndex(charDir, cardId, displayName);

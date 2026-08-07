@@ -18,9 +18,24 @@ Do **not** write movement deltas onto the card. Durable evolution commits go to 
 Character cards are **pure YAML** (`.md` extension for tooling compatibility):
 
 - Entire card is a single YAML document between `---` fences
-- Structured fields: identity, psyche matrix, `transformation_weights` (**build defaults**), `depth_of_knowledge`, `voice`, `history_anchors`, `scene_seeds`
+- Structured fields: identity, **`physical`** (body only), **`character_style`** (dress), **`personality`**, **`behavior`**, **`hobbies`**, psyche matrix, `transformation_weights` (**build defaults**), `depth_of_knowledge`, `voice`, `history_anchors`, `scene_seeds`
+- **Do not merge** personality, behavior, and physical into one description field — loaders and UIs must keep them separate
 - One-line load protocol after the closing `---` (overlays `_log.yaml` snapshot when present)
 - No duplicate markdown tables — the YAML is the identity source of truth
+
+### Imaging-oriented identity
+
+| Field | Purpose |
+|:---|:---|
+| `physical` | Stable body for image gen: height, build, hair, eyes, skin, face, distinguishing features, posture/movement. Optional `summary` for one-line fallback. `scent` is prose-only. |
+| `character_style` | Default wardrobe look: aesthetic, typical outfit, colors, fabrics, accessories, footwear, grooming, signature items, avoid list. Overridden by live RP clothing when present. |
+| `personality` | Who they are (temperament/values/social stance). Human-facing; not body, not clothes. |
+| `behavior` | How they act under pressure/trust/routine. Not appearance; speech detail lives under `voice`. |
+| `hobbies` | Free-time activities for scene fuel / props — not required in portrait prompts |
+
+Prefer the structured maps in [`_template.md`](./_template.md). A legacy single-string `physical` remains valid; expand when editing for imaging fidelity.
+
+Art medium (`anime`, `oil`, etc.) is **not** a card field — set it at render time (`/style`).
 
 ## Drafting flow
 
@@ -48,6 +63,7 @@ Drafting uses this folder + Framework. For a **chat stress-test** of a card (or 
 1. Copy `_template.md` → `Characters/[slug].md` (or run [character_builder_prompt.md](../Framework/Prompts/character_builder_prompt.md))
 2. Copy `_log_template.yaml` → `Characters/[slug]_log.yaml`; seed snapshot from the card (`as_of: build`); leave `history: []`
 3. Add a Snapshot row in [Character_Change_Log.md](../Framework/Character_Change_Log.md)
-4. Fill card YAML: **age**, **canon_adult**, physical, cultural_bias, psyche matrix from Main + realm_data.yaml
+4. Fill card YAML: **age**, **canon_adult**, structured **physical**, **character_style**, **hobbies**, cultural_bias, psyche matrix from Main + realm_data.yaml
 5. Voice: nearest A–F base under `voice:`, then override with idiolect on the card
 6. Drafting: load Main + Rules_Index + realm_data.yaml + card + log (+ Continuity_Ledger)
+7. Imaging: identity from `physical`; default clothes from `character_style` unless RP set an outfit

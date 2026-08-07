@@ -178,6 +178,9 @@ public static class CharacterCatalog
   ""age"": 24,
   ""canon_adult"": true,
   ""physical"": ""Slender, athletic build with expressive blue eyes and silver-tinted hair."",
+  ""character_style"": ""Simple layered lounge wear; minimal jewelry."",
+  ""personality"": ""Quiet observer who values composure and self-reliance."",
+  ""behavior"": ""Watches first, speaks second; under pressure stays still and measured."",
   ""active_focus"": ""Realm I — Form"",
   ""cognitive_bias"": ""Self-reliance and quiet observation."",
   ""cognitive_gift"": ""Unflappable composure under pressure."",
@@ -300,14 +303,24 @@ public static class CharacterCatalog
     public record LoadedCharacterCardInfo(
         string Name,
         int Age,
-        string Description,
+        /// <summary>Who they are (temperament/values). Not body.</summary>
+        string Personality,
+        /// <summary>How they act under pressure/trust. Not appearance.</summary>
+        string Behavior,
+        /// <summary>Body identity only.</summary>
         string Physical,
+        /// <summary>Default dress / accessories.</summary>
+        string CharacterStyle,
         string CognitiveGift,
         List<string> Goals,
         List<string> Likes,
         List<string> Skills,
         string AvatarPath
-    );
+    )
+    {
+        /// <summary>Legacy alias used by older callers; equals Personality.</summary>
+        public string Description => Personality;
+    };
 
     public static string GetCharacterDisplayName(string fileName, string? baseDir = null)
     {
@@ -381,19 +394,21 @@ public static class CharacterCatalog
     public static LoadedCharacterCardInfo LoadCardDetails(string fileName, string? baseDir = null)
     {
         if (string.IsNullOrEmpty(fileName) || fileName.StartsWith("("))
-            return new LoadedCharacterCardInfo("(No Character Selected)", 0, "No character card loaded.", "", "", new(), new(), new(), "");
+            return new LoadedCharacterCardInfo("(No Character Selected)", 0, "No character card loaded.", "", "", "", "", new(), new(), new(), "");
 
         string charDir = ResolveCharactersDirectory(baseDir);
         string filePath = Path.Combine(charDir, fileName);
 
         if (!File.Exists(filePath))
-            return new LoadedCharacterCardInfo("Unknown Character", 0, "Character card file not found.", "", "", new(), new(), new(), "");
+            return new LoadedCharacterCardInfo("Unknown Character", 0, "Character card file not found.", "", "", "", "", new(), new(), new(), "");
 
         string content = File.ReadAllText(filePath);
         string name = "";
         int age = 0;
-        string description = "";
+        string personality = "";
+        string behavior = "";
         string physical = "";
+        string characterStyle = "";
         string cognitiveGift = "";
         var goals = new List<string>();
         var likes = new List<string>();
@@ -410,9 +425,14 @@ public static class CharacterCatalog
                     name = cn.GetString() ?? "";
                 if (root.TryGetProperty("age", out var a) && a.ValueKind == JsonValueKind.Number)
                     age = a.GetInt32();
-                if (root.TryGetProperty("cultural_bias", out var cb)) description = cb.GetString() ?? "";
-                if (root.TryGetProperty("physical", out var p)) physical = p.GetString() ?? "";
-                if (root.TryGetProperty("cognitive_gift", out var cg)) cognitiveGift = cg.GetString() ?? "";
+
+                personality = CardFieldFormatter.ReadPersonality(root);
+                behavior = CardFieldFormatter.ReadBehavior(root);
+                physical = CardFieldFormatter.FlattenPhysical(root);
+                characterStyle = CardFieldFormatter.FlattenCharacterStyle(root);
+
+                if (root.TryGetProperty("cognitive_gift", out var cg))
+                    cognitiveGift = cg.GetString() ?? "";
 
                 if (root.TryGetProperty("somatic_zones", out var sz) && sz.ValueKind == JsonValueKind.Array)
                 {
@@ -423,24 +443,28 @@ public static class CharacterCatalog
                     }
                 }
 
-                if (root.TryGetProperty("depth_of_knowledge", out var dok))
+                if (root.TryGetProperty("depth_of_knowledge", out var dok) &&
+                    dok.ValueKind == JsonValueKind.Object &&
+                    dok.TryGetProperty("general", out var gen))
                 {
-                    if (dok.TryGetProperty("general", out var gen))
+                    var genStr = gen.GetString();
+                    if (!string.IsNullOrEmpty(genStr))
                     {
-                        var genStr = gen.GetString();
-                        if (!string.IsNullOrEmpty(genStr))
+                        foreach (var s in genStr.Split(',', ';'))
                         {
-                            foreach (var s in genStr.Split(',', ';'))
-                            {
-                                string trimmed = s.Trim();
-                                if (!string.IsNullOrEmpty(trimmed)) skills.Add(trimmed);
-                            }
+                            string trimmed = s.Trim();
+                            if (!string.IsNullOrEmpty(trimmed)) skills.Add(trimmed);
                         }
                     }
-                    if (dok.TryGetProperty("personal", out var pers))
+                }
+
+                if (root.TryGetProperty("hobbies", out var hobbies) && hobbies.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var h in hobbies.EnumerateArray())
                     {
-                        var pStr = pers.GetString();
-                        if (!string.IsNullOrEmpty(pStr) && string.IsNullOrEmpty(description)) description = pStr;
+                        string? hs = h.GetString();
+                        if (!string.IsNullOrWhiteSpace(hs) && likes.Count < 8)
+                            likes.Add(hs.Trim());
                     }
                 }
             }
@@ -448,7 +472,7 @@ public static class CharacterCatalog
         }
         else
         {
-            // Markdown parsing (legacy)
+            // Markdown parsing (legacy line scan)
             var lines = content.Split('\n');
             bool inYaml = false;
             foreach (var line in lines)
@@ -464,10 +488,16 @@ public static class CharacterCatalog
                     name = trimmed[5..].Trim(' ', '"', '\'');
                 else if (trimmed.StartsWith("age:", StringComparison.OrdinalIgnoreCase))
                     int.TryParse(trimmed[4..].Trim(' ', '"', '\''), out age);
-                else if (trimmed.StartsWith("cultural_bias:", StringComparison.OrdinalIgnoreCase))
-                    description = trimmed[14..].Trim(' ', '"', '\'');
+                else if (trimmed.StartsWith("personality:", StringComparison.OrdinalIgnoreCase))
+                    personality = trimmed["personality:".Length..].Trim(' ', '"', '\'');
+                else if (trimmed.StartsWith("behavior:", StringComparison.OrdinalIgnoreCase))
+                    behavior = trimmed["behavior:".Length..].Trim(' ', '"', '\'');
+                else if (trimmed.StartsWith("cultural_bias:", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(personality))
+                    personality = trimmed[14..].Trim(' ', '"', '\'');
                 else if (trimmed.StartsWith("physical:", StringComparison.OrdinalIgnoreCase))
                     physical = trimmed[9..].Trim(' ', '"', '\'');
+                else if (trimmed.StartsWith("character_style:", StringComparison.OrdinalIgnoreCase))
+                    characterStyle = trimmed["character_style:".Length..].Trim(' ', '"', '\'');
                 else if (trimmed.StartsWith("cognitive_gift:", StringComparison.OrdinalIgnoreCase))
                     cognitiveGift = trimmed[15..].Trim(' ', '"', '\'');
                 else if (trimmed.StartsWith("active_focus:", StringComparison.OrdinalIgnoreCase))
@@ -484,10 +514,9 @@ public static class CharacterCatalog
         if (string.IsNullOrWhiteSpace(name))
             name = GetCharacterDisplayName(fileName, baseDir);
 
-        if (string.IsNullOrEmpty(description))
-        {
-            description = !string.IsNullOrEmpty(physical) ? physical : $"Character card loaded for {name}.";
-        }
+        // Never fall physical into personality — leave blank if unknown
+        if (string.IsNullOrWhiteSpace(personality))
+            personality = string.IsNullOrWhiteSpace(name) ? "" : $"{name} — personality not specified on card.";
 
         if (goals.Count == 0)
         {
@@ -523,7 +552,9 @@ public static class CharacterCatalog
         if (string.IsNullOrEmpty(avatarPath))
             avatarPath = ResolveAvatarPath(charDir, cardId, name);
 
-        return new LoadedCharacterCardInfo(name, age, description, physical, cognitiveGift, goals, likes, skills, avatarPath);
+        return new LoadedCharacterCardInfo(
+            name, age, personality, behavior, physical, characterStyle,
+            cognitiveGift, goals, likes, skills, avatarPath);
     }
 
     private static string ResolveAvatarPath(string charDir, string cardId, string displayName)

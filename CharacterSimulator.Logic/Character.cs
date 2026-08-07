@@ -31,7 +31,16 @@ public class Character
     public string Name { get; set; } = string.Empty;
     public string CardPath { get; set; } = string.Empty;
     public Dictionary<string, string> Attributes { get; set; } = new Dictionary<string, string>();
+    /// <summary>Legacy combined summary. Prefer Personality / Behavior / PhysicalDescription.</summary>
     public string Bio { get; set; } = string.Empty;
+    /// <summary>Who they are — temperament, values, social stance. Not body or clothes.</summary>
+    public string Personality { get; set; } = string.Empty;
+    /// <summary>How they act under pressure/trust/routine. Not appearance or wardrobe.</summary>
+    public string Behavior { get; set; } = string.Empty;
+    /// <summary>Body identity for imaging/prose. Not personality or fashion.</summary>
+    public string PhysicalDescription { get; set; } = string.Empty;
+    /// <summary>Default dress / accessories. Not art medium.</summary>
+    public string CharacterStyle { get; set; } = string.Empty;
     public string CurrentState { get; set; } = "DORMANT";
     public string CognitiveBias { get; set; } = string.Empty;
     public string CognitiveGift { get; set; } = string.Empty;

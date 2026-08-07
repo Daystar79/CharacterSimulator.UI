@@ -229,39 +229,51 @@
                         }
                     </div>
 
-                    <!-- EXPANDED EDITABLE TEXT SECTIONS: DESCRIPTION & CLOTHING -->
-                    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.45rem;">
-                        <!-- CHARACTER DESCRIPTION (Expands) -->
-                        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;">
-                                <span>📖</span>
-                                <span>DESCRIPTION</span>
-                            </div>
-                            <textarea 
-                                @bind="_charDescription" 
+                    <!-- SEPARATE FIELDS: personality · behavior · physical · style (never one blob) -->
+                    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.35rem; overflow-y: auto;">
+                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-blue); text-transform: uppercase; margin-bottom: 0.15rem;">🧠 Personality</div>
+                            <textarea
+                                @bind="_charPersonality"
                                 @bind:event="oninput"
-                                style="flex: 1; min-height: 0; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
-                                placeholder="Click to edit character biography and traits..."
-                                title="Click to edit character description"></textarea>
+                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
+                                placeholder="Who they are — temperament, values, social stance (not body)..."
+                                title="Personality: who they are"></textarea>
                         </div>
 
-                        <!-- CLOTHING & ACCESSORIES (Expands) -->
-                        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;">
-                                <span>👗</span>
-                                <span>CLOTHING &amp; ACCESSORIES</span>
-                            </div>
-                            <textarea 
-                                @bind="_charPhysical" 
+                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-amber); text-transform: uppercase; margin-bottom: 0.15rem;">🎭 Behavior</div>
+                            <textarea
+                                @bind="_charBehavior"
                                 @bind:event="oninput"
-                                style="flex: 1; min-height: 0; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
-                                placeholder="Attire, clothing style, armor, jewelry, or signature items..."
-                                title="Click to edit clothing and accessories"></textarea>
+                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
+                                placeholder="How they act under pressure, trust, and routine (not appearance)..."
+                                title="Behavior: how they act"></textarea>
+                        </div>
+
+                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-green, #34d399); text-transform: uppercase; margin-bottom: 0.15rem;">👤 Physical</div>
+                            <textarea
+                                @bind="_charPhysical"
+                                @bind:event="oninput"
+                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
+                                placeholder="Body only — height, build, hair, eyes, skin, face, marks, movement..."
+                                title="Physical appearance (body only)"></textarea>
+                        </div>
+
+                        <div style="flex: 1; min-height: 2.5rem; display: flex; flex-direction: column;">
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 0.15rem;">👗 Style &amp; Accessories</div>
+                            <textarea
+                                @bind="_charStyle"
+                                @bind:event="oninput"
+                                style="flex: 1; min-height: 2.5rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.25); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color); resize: none; font-family: inherit; width: 100%; box-sizing: border-box;"
+                                placeholder="How they dress — outfits, accessories, palette, signature items..."
+                                title="Character style / clothing defaults"></textarea>
                         </div>
                     </div>
 
-                    <!-- GENERATE PORTRAIT BUTTON -->
-                    <button class="btn btn-secondary" style="width: 100%; font-size: 0.7rem; padding: 0.3rem; justify-content: center; flex: 0 0 auto;" @onclick="() => OpenGeneratePortraitModal(_charPhysical, _selectedCharFile)">✨ Generate Portrait</button>
+                    <!-- GENERATE PORTRAIT BUTTON (body + dress only) -->
+                    <button class="btn btn-secondary" style="width: 100%; font-size: 0.7rem; padding: 0.3rem; justify-content: center; flex: 0 0 auto;" @onclick="() => OpenGeneratePortraitModal(BuildPortraitAppearance(), _selectedCharFile)">✨ Generate Portrait</button>
                 </div>
             }
         </div>
@@ -295,8 +307,10 @@
     private string _selectedCharFile = "";
     private string _charName = "(No Character Selected)";
     private int _charAge = 0;
-    private string _charDescription = "No character card loaded.";
+    private string _charPersonality = "No character card loaded.";
+    private string _charBehavior = "";
     private string _charPhysical = "";
+    private string _charStyle = "";
     private string _charAvatarPath = "";
     private List<string> _charGoals = new();
     private List<string> _charSkills = new();
@@ -326,8 +340,8 @@
             string scenePrompt = ImageArtStyleCatalog.BuildScenePrompt(
                 sceneContext,
                 characterName: _isCharacterLoaded ? _charName : null,
-                characterDescription: _isCharacterLoaded ? _charDescription : null,
-                characterPhysical: _isCharacterLoaded ? _charPhysical : null,
+                characterDescription: null, // never inject personality into scene stills
+                characterPhysical: _isCharacterLoaded ? BuildPortraitAppearance() : null,
                 artStyleId: artStyleId);
 
             _sceneImagePath = await AiImageGeneratorService.GeneratePortraitAsync(
@@ -545,8 +559,10 @@
             _selectedCharFile = fileName;
             _charName = info.Name;
             _charAge = info.Age;
-            _charDescription = info.Description;
+            _charPersonality = info.Personality;
+            _charBehavior = info.Behavior;
             _charPhysical = info.Physical;
+            _charStyle = info.CharacterStyle;
             _charAvatarPath = info.AvatarPath;
             _charGoals = info.Goals;
             _charSkills = info.Skills;
@@ -596,7 +612,7 @@
             else
             {
                 _charAvatarPath = "";
-                _ = AutoEnsurePortraitAsync(cardId, info.Physical, info.Description);
+                _ = AutoEnsurePortraitAsync(cardId, info.Physical, info.CharacterStyle);
             }
 
             // Auto-render / update scene artwork with character presence if missing or on selection
@@ -643,12 +659,13 @@
         return "";
     }
 
-    private async Task AutoEnsurePortraitAsync(string cardId, string physical, string description)
+    private async Task AutoEnsurePortraitAsync(string cardId, string physical, string characterStyle)
     {
         if (string.IsNullOrWhiteSpace(cardId)) return;
         try
         {
-            string prompt = !string.IsNullOrWhiteSpace(physical) ? physical : description;
+            // Imaging uses body + dress only — never personality/behavior
+            string prompt = CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(physical, characterStyle);
             if (string.IsNullOrWhiteSpace(prompt))
                 prompt = "Character portrait";
 
@@ -689,8 +706,10 @@
         _selectedCharFile = "";
         _charName = "(No Character Selected)";
         _charAge = 0;
-        _charDescription = "No character card loaded.";
+        _charPersonality = "No character card loaded.";
+        _charBehavior = "";
         _charPhysical = "";
+        _charStyle = "";
         _charAvatarPath = "";
         _charGoals = new();
         _charSkills = new();
@@ -985,6 +1004,9 @@
             StateHasChanged();
         });
     }
+
+    private string BuildPortraitAppearance() =>
+        CharacterSimulator.Logic.CardFieldFormatter.BuildImagingPrompt(_charPhysical, _charStyle);
 
     private void OpenGeneratePortraitModal(string appearance, string cardFileName)
     {

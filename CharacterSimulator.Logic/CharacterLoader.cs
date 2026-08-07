@@ -64,6 +64,24 @@ public static class CharacterLoader
             }
         }
 
+        character.PhysicalDescription = CardFieldFormatter.FlattenPhysical(root);
+        if (string.IsNullOrWhiteSpace(character.PhysicalDescription) &&
+            character.Attributes.TryGetValue("physical", out var physAttr))
+            character.PhysicalDescription = physAttr;
+        if (!string.IsNullOrWhiteSpace(character.PhysicalDescription))
+            character.Attributes["physical"] = character.PhysicalDescription;
+
+        character.CharacterStyle = CardFieldFormatter.FlattenCharacterStyle(root);
+        if (!string.IsNullOrWhiteSpace(character.CharacterStyle))
+            character.Attributes["character_style"] = character.CharacterStyle;
+
+        character.Personality = CardFieldFormatter.ReadPersonality(root);
+        character.Behavior = CardFieldFormatter.ReadBehavior(root);
+        if (!string.IsNullOrWhiteSpace(character.Personality))
+            character.Attributes["personality"] = character.Personality;
+        if (!string.IsNullOrWhiteSpace(character.Behavior))
+            character.Attributes["behavior"] = character.Behavior;
+
         ApplyJsonVoice(root, character);
 
         if (root.TryGetProperty("somatic_zones", out var zonesProp) && zonesProp.ValueKind == JsonValueKind.Array)
@@ -140,30 +158,18 @@ public static class CharacterLoader
 
     private static string BuildJsonBio(JsonElement root, string charName)
     {
+        // Bio is background/knowledge only — personality, behavior, and physical stay separate fields.
         var sb = new StringBuilder();
-
-        AppendLineIf(sb, GetString(root, "cultural_bias"));
-        string? cognitiveBias = GetString(root, "cognitive_bias");
-        if (!string.IsNullOrEmpty(cognitiveBias)) sb.AppendLine($"Cognitive bias: {cognitiveBias}");
-        string? cognitiveGift = GetString(root, "cognitive_gift");
-        if (!string.IsNullOrEmpty(cognitiveGift)) sb.AppendLine($"Cognitive gift: {cognitiveGift}");
-
-        if (root.TryGetProperty("psychology", out var psych) && psych.ValueKind == JsonValueKind.Object)
-        {
-            if (psych.TryGetProperty("temperament", out var temp))
-                sb.AppendLine($"Temperament: {temp.GetString()}");
-            if (psych.TryGetProperty("core_drives", out var drives) && drives.ValueKind == JsonValueKind.Array)
-                sb.AppendLine("Drives: " + string.Join("; ", drives.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrEmpty(s))));
-            if (psych.TryGetProperty("fears", out var fears) && fears.ValueKind == JsonValueKind.Array)
-                sb.AppendLine("Fears: " + string.Join("; ", fears.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrEmpty(s))));
-        }
 
         if (root.TryGetProperty("depth_of_knowledge", out var dok) && dok.ValueKind == JsonValueKind.Object)
         {
             if (dok.TryGetProperty("personal", out var personal))
-                sb.AppendLine(personal.GetString());
+                AppendLineIf(sb, personal.GetString());
             if (dok.TryGetProperty("general", out var general))
-                sb.AppendLine($"Knowledge: {general.GetString()}");
+            {
+                string? g = general.GetString();
+                if (!string.IsNullOrEmpty(g)) sb.AppendLine($"Knowledge: {g}");
+            }
         }
 
         if (root.TryGetProperty("history_anchors", out var history) && history.ValueKind == JsonValueKind.Array)
@@ -173,12 +179,11 @@ public static class CharacterLoader
                 sb.AppendLine("History: " + string.Join(" | ", anchors));
         }
 
-        if (root.TryGetProperty("voice", out var voice) && voice.ValueKind == JsonValueKind.Object)
+        if (root.TryGetProperty("hobbies", out var hobbies) && hobbies.ValueKind == JsonValueKind.Array)
         {
-            if (voice.TryGetProperty("baseline", out var vbase))
-                sb.AppendLine($"Voice: {vbase.GetString()}");
-            if (voice.TryGetProperty("hard_bans", out var bans) && bans.ValueKind == JsonValueKind.Array)
-                sb.AppendLine("Hard bans: " + string.Join("; ", bans.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrEmpty(s))));
+            var list = hobbies.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrEmpty(s)).ToList();
+            if (list.Count > 0)
+                sb.AppendLine("Hobbies: " + string.Join("; ", list));
         }
 
         string? faction = GetString(root, "faction");
@@ -268,21 +273,101 @@ public static class CharacterLoader
             {
                 foreach (var kvp in physMap)
                     character.Attributes[kvp.Key] = YamlValueToString(kvp.Value);
+
+                // Body-only display (exclude clothing/scent from identity string)
+                var bodyParts = new List<string>();
+                foreach (var key in new[] { "summary", "height", "build", "body_details", "hair", "eyes", "skin", "face", "distinguishing_features", "defining_features", "posture_movement" })
+                {
+                    if (physMap.TryGetValue(key, out var v))
+                    {
+                        string t = YamlValueToString(v);
+                        if (!string.IsNullOrWhiteSpace(t)) bodyParts.Add(t);
+                    }
+                }
+                character.PhysicalDescription = bodyParts.Count > 0
+                    ? string.Join("; ", bodyParts)
+                    : string.Join("; ", physMap
+                        .Where(kv => !kv.Key.Equals("clothing", StringComparison.OrdinalIgnoreCase)
+                                     && !kv.Key.Equals("scent", StringComparison.OrdinalIgnoreCase))
+                        .Select(kv => YamlValueToString(kv.Value))
+                        .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+                if (physMap.TryGetValue("clothing", out var clothingVal))
+                    character.CharacterStyle = YamlValueToString(clothingVal);
             }
             else
             {
-                character.Attributes["physical"] = YamlValueToString(physicalVal);
+                character.PhysicalDescription = YamlValueToString(physicalVal);
+                character.Attributes["physical"] = character.PhysicalDescription;
             }
         }
+
+        string? personality = GetMapString(root, "personality") ?? GetMapString(root, "vibe");
+        if (!string.IsNullOrWhiteSpace(personality))
+            character.Personality = personality;
+        else
+        {
+            var pParts = new List<string>();
+            AppendLineIfList(pParts, GetMapString(root, "cultural_bias"));
+            AppendLineIfList(pParts, GetMapString(root, "cognitive_bias"));
+            AppendLineIfList(pParts, GetMapString(root, "cognitive_gift"));
+            character.Personality = string.Join("\n", pParts);
+        }
+
+        string? behavior = GetMapString(root, "behavior");
+        if (!string.IsNullOrWhiteSpace(behavior))
+            character.Behavior = behavior;
+
+        var styleMap = AsStringKeyMap(root.GetValueOrDefault("character_style"));
+        if (styleMap != null)
+        {
+            character.CharacterStyle = string.Join("; ",
+                styleMap.Select(kv => YamlValueToString(kv.Value)).Where(s => !string.IsNullOrWhiteSpace(s)));
+        }
+        else
+        {
+            string? styleStr = GetMapString(root, "character_style");
+            if (!string.IsNullOrWhiteSpace(styleStr))
+                character.CharacterStyle = styleStr;
+        }
+
+        if (!string.IsNullOrWhiteSpace(character.PhysicalDescription))
+            character.Attributes["physical"] = character.PhysicalDescription;
+        if (!string.IsNullOrWhiteSpace(character.CharacterStyle))
+            character.Attributes["character_style"] = character.CharacterStyle;
+        if (!string.IsNullOrWhiteSpace(character.Personality))
+            character.Attributes["personality"] = character.Personality;
 
         ApplyYamlVoice(root, character);
         ApplyYamlSomatic(root, character);
         ApplyYamlGoals(root, character);
         ApplyYamlSessionVariants(root, character);
 
+        // Behavior fallback from voice/somatics after voice is applied
+        if (string.IsNullOrWhiteSpace(character.Behavior))
+        {
+            var bParts = new List<string>();
+            AppendLineIfList(bParts, GetMapString(root, "default_somatic_alignment"));
+            if (!string.IsNullOrWhiteSpace(character.VerbalDefense))
+                bParts.Add("Under pressure: " + character.VerbalDefense);
+            if (!string.IsNullOrWhiteSpace(character.GenerativeStance))
+                bParts.Add("Under trust: " + character.GenerativeStance);
+            if (character.Attributes.TryGetValue("signature_tics", out var tics) && !string.IsNullOrWhiteSpace(tics))
+                bParts.Add("Mannerisms: " + tics);
+            character.Behavior = string.Join("\n", bParts);
+        }
+        if (!string.IsNullOrWhiteSpace(character.Behavior))
+            character.Attributes["behavior"] = character.Behavior;
+
         character.Bio = BuildYamlBio(root, displayName, markdownBody);
         ResolvePortrait(character, path, callName, legalName);
         return character;
+    }
+
+    private static void AppendLineIfList(List<string> parts, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            parts.Add(value.Trim());
     }
 
     private static void ApplyYamlSessionVariants(Dictionary<string, object?> root, Character character)
@@ -427,24 +512,8 @@ public static class CharacterLoader
 
     private static string BuildYamlBio(Dictionary<string, object?> root, string displayName, string markdownBody)
     {
+        // Background/knowledge only — personality, behavior, physical stay on dedicated Character fields.
         var sb = new StringBuilder();
-
-        AppendLineIf(sb, GetMapString(root, "cultural_bias"));
-        string? cognitiveBias = GetMapString(root, "cognitive_bias");
-        if (!string.IsNullOrEmpty(cognitiveBias)) sb.AppendLine($"Cognitive bias: {cognitiveBias}");
-        string? cognitiveGift = GetMapString(root, "cognitive_gift");
-        if (!string.IsNullOrEmpty(cognitiveGift)) sb.AppendLine($"Cognitive gift: {cognitiveGift}");
-
-        var psych = AsStringKeyMap(root.GetValueOrDefault("psychology"));
-        if (psych != null)
-        {
-            string? temp = GetMapString(psych, "temperament");
-            if (!string.IsNullOrEmpty(temp)) sb.AppendLine($"Temperament: {temp}");
-            if (psych.TryGetValue("core_drives", out var drives))
-                sb.AppendLine("Drives: " + YamlValueToString(drives));
-            if (psych.TryGetValue("fears", out var fears))
-                sb.AppendLine("Fears: " + YamlValueToString(fears));
-        }
 
         var dok = AsStringKeyMap(root.GetValueOrDefault("depth_of_knowledge"));
         if (dok != null)
@@ -463,13 +532,11 @@ public static class CharacterLoader
                 sb.AppendLine("History: " + anchors.Replace(", ", " | "));
         }
 
-        var voice = AsStringKeyMap(root.GetValueOrDefault("voice"));
-        if (voice != null)
+        if (root.TryGetValue("hobbies", out var hobbies))
         {
-            string? baseline = GetMapString(voice, "baseline");
-            if (!string.IsNullOrEmpty(baseline)) sb.AppendLine($"Voice: {baseline}");
-            if (voice.TryGetValue("hard_bans", out var bans))
-                sb.AppendLine("Hard bans: " + YamlValueToString(bans));
+            string h = YamlValueToString(hobbies);
+            if (!string.IsNullOrWhiteSpace(h))
+                sb.AppendLine("Hobbies: " + h);
         }
 
         string? faction = GetMapString(root, "faction");
@@ -481,7 +548,6 @@ public static class CharacterLoader
         if (!string.IsNullOrWhiteSpace(structured))
             return structured;
 
-        // Fallback: markdown body after frontmatter (skip pure load-protocol docs if short structured missing)
         if (!string.IsNullOrWhiteSpace(markdownBody))
             return TruncateMarkdownBio(markdownBody);
 

@@ -3,7 +3,38 @@
   "call_name": "[preferred call-name or null]",
   "age": 21,
   "canon_adult": true,
-  "physical": "[Coloration, features, bone structure, movement — show, never category-label]",
+  "physical": {
+    "summary": "[Optional one-line full-body identity for quick loads / prose fallback]",
+    "height": "[e.g. 5'6\" / 168 cm]",
+    "build": "[frame, proportions, silhouette]",
+    "body_details": "[optional render-critical proportions or body traits]",
+    "hair": "[color, length, texture, cut/style]",
+    "eyes": "[color, shape, brows/lashes if distinctive]",
+    "skin": "[tone, texture, flush/marking tendency — concrete, not category labels]",
+    "face": "[bone structure, jaw, cheekbones, nose, lips, asymmetry]",
+    "distinguishing_features": [
+      "[scar, tattoo, birthmark, or other must-render trait]"
+    ],
+    "posture_movement": "[resting posture + gait / how they carry the body]",
+    "scent": "[optional ambient scent for prose only — omit from image prompts]"
+  },
+  "character_style": {
+    "aesthetic": "[overall look vocabulary]",
+    "typical_outfit": "[default full outfit for image gen when RP clothing unspecified]",
+    "colors": ["[dominant palette tokens]"],
+    "fabrics_materials": ["[silk, denim, cashmere…]"],
+    "accessories": ["[jewelry, belts, bags, tools worn on body…]"],
+    "footwear": "[default footwear or barefoot]",
+    "grooming": "[visible makeup, nails, facial hair if relevant]",
+    "signature_items": ["[must-render personal props when in default look]"],
+    "avoid": ["[what they never wear]"]
+  },
+  "hobbies": [
+    "[free-time activity / scene fuel]",
+    "[second hobby]"
+  ],
+  "personality": "[Plain English who they are — temperament, values, social stance. Not body, not clothes.]",
+  "behavior": "[Plain English how they act under pressure, trust, and routine. Not appearance, not wardrobe.]",
   "voice_archetype": "[A-F or hybrid]",
   "cultural_bias": "[Belief/Heritage/Era — temporal tracking defaults]",
   "active_focus": "Realm [N] — [Name]",

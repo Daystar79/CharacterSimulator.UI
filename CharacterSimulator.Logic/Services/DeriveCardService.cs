@@ -214,11 +214,15 @@ public static class DeriveCardService
         sb.AppendLine("HARD CONSTRAINTS:");
         sb.AppendLine("1. Canon SSOT is the SOURCE TEXT below. Model training recall is NOT authority.");
         sb.AppendLine("2. If SOURCE TEXT is thin, leave fields as \"unknown\" — do NOT invent lore, tragedy, or body details.");
-        sb.AppendLine("3. physical is a faithful compression of canon appearance/body/movement/signature features. Forbidden: beautification, body drift, race/species drift, added lingerie/armor, generic anime substitution.");
+        sb.AppendLine("3. Keep these SEPARATE — never merge into one description blob:");
+        sb.AppendLine("   - physical: body identity only (height/build/hair/eyes/skin/face/signature features/movement). Forbidden: beautification, body drift, race/species drift, personality adjectives as body, fashion mixed into physical.");
+        sb.AppendLine("   - character_style: default dress/accessories/palette only (from documented outfits). Not art medium.");
+        sb.AppendLine("   - personality: plain-English who they are (temperament/values/social stance). Not body, not clothes.");
+        sb.AppendLine("   - behavior: plain-English how they act under pressure/trust/routine. Not appearance.");
         sb.AppendLine("4. history_anchors: 2–3 coarse scene-useful facts present in source only.");
-        sb.AppendLine("5. depth_of_knowledge only from what the character demonstrably knows in canon.");
-        sb.AppendLine("6. Wound (cognitive_bias) & Gift (cognitive_gift) from observed pressure/trust patterns only.");
-        sb.AppendLine("7. voice only from how they speak/act in source. No therapy-speak imports.");
+        sb.AppendLine("5. depth_of_knowledge and hobbies only from what the character demonstrably knows/does in canon.");
+        sb.AppendLine("6. Wound (cognitive_bias) & Gift (cognitive_gift) from observed pressure/trust patterns only — engine labels, distinct from personality/behavior prose.");
+        sb.AppendLine("7. voice only from how they speak in source. No therapy-speak imports.");
         sb.AppendLine("8. Gaps stay gaps. Missing → \"unknown\" or minimal.");
         sb.AppendLine("9. If age < 18 or unclear adult status: canon_adult must be false; never sexualize.");
         sb.AppendLine("10. User filters may label a variant but must not override canon base facts.");
@@ -248,7 +252,11 @@ public static class DeriveCardService
                 "call_name": "...",
                 "age": 0,
                 "canon_adult": true,
-                "physical": "...",
+                "physical": "body only: height/build/hair/eyes/skin/face/marks/movement",
+                "character_style": "default outfit + accessories + palette",
+                "personality": "who they are — temperament/values/social stance",
+                "behavior": "how they act under pressure/trust/routine",
+                "hobbies": ["...", "..."],
                 "voice_archetype": "A-F or hybrid",
                 "cultural_bias": "...",
                 "active_focus": "Realm N — Name",

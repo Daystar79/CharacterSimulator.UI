@@ -3,7 +3,51 @@ name: "[Full Name]"
 call_name: "[preferred call-name or null]"
 age: [Integer years]
 canon_adult: true
-physical: "[Coloration, features, bone structure, movement — show, never category-label]"
+
+# Body identity (stable). Imaging UI / CharacterRenderingEngine layer [1].
+# Concrete sensory detail only — show, never category-label ethnicity.
+# Legacy cards may use a single string for `physical`; structured form is preferred.
+physical:
+  summary: "[Optional one-line full-body identity for quick loads / prose fallback]"
+  height: "[e.g. 5'6\" / 168 cm]"
+  build: "[frame, proportions, silhouette — athletic, soft-curved, heavy-set, willowy…]"
+  body_details: "[optional render-critical proportions or body traits; omit if redundant with build]"
+  hair: "[color, length, texture, cut/style, how it falls]"
+  eyes: "[color, shape, brows/lashes if distinctive]"
+  skin: "[tone, texture, flush/marking tendency — concrete, not category labels]"
+  face: "[bone structure, jaw, cheekbones, nose, lips, asymmetry]"
+  distinguishing_features:
+    - "[scar, tattoo, birthmark, ears, tails, other must-render trait]"
+  posture_movement: "[resting posture + gait / how they carry the body]"
+  scent: "[optional ambient scent for prose only — omit from image prompts]"
+
+# Default dress look. Imaging UI uses this when RP has not set clothing_barriers / outfit.
+# Do not put art medium here (anime/oil/etc.) — that is runtime `/style`.
+character_style:
+  aesthetic: "[overall look vocabulary — e.g. soft sanctuary lounge, industrial practical, studio performance]"
+  typical_outfit: "[default full outfit for image gen — garments, layers, fit]"
+  colors: ["[dominant palette tokens]"]
+  fabrics_materials: ["[silk, denim, cashmere, mesh…]"]
+  accessories: ["[jewelry, belts, bags, tools worn on body…]"]
+  footwear: "[default footwear or barefoot]"
+  grooming: "[visible makeup, nails, facial hair, hair products if relevant]"
+  signature_items: ["[must-render personal props when in default look]"]
+  avoid: ["[what they never wear — keeps image gen on-brand]"]
+
+hobbies:
+  - "[free-time activity / scene fuel — concrete, not a résumé line]"
+  - "[second hobby]"
+  - "[optional third]"
+
+# Who they are — temperament, values, social stance. NOT body. NOT clothes.
+# Separate from cognitive_bias/gift (those are engine wound/gift mappings).
+personality: "[Plain English who they are — e.g. 'Warm sanctuary host who treats closeness as safety and analysis as a threat']"
+
+# How they act — social/behavioral patterns under pressure, trust, and routine.
+# Body language habits and social tactics. NOT physical appearance. NOT wardrobe.
+# Speech shape belongs under voice:; this is action/manner.
+behavior: "[Plain English how they act — e.g. 'Under pressure she absorbs tension into touch and slow presence; under trust she expands silence and offers refuge without ownership']"
+
 voice_archetype: "[A-F or hybrid]"
 cultural_bias: "[Belief/Heritage/Era — temporal tracking defaults (e.g. covenant, linear progress, cyclic liturgy)]"
 active_focus: "Realm [N] — [Name]"

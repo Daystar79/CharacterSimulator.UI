@@ -227,13 +227,13 @@ public class LlmClientStatus
     public ClientStatus Status { get; set; }
 
     /// <summary>Status message</summary>
-    public string Message { get; set; }
+    public string Message { get; set; } = "";
 
     /// <summary>Path to the executable</summary>
-    public string ExecutablePath { get; set; }
+    public string ExecutablePath { get; set; } = "";
 
     /// <summary>Arguments template</summary>
-    public string ArgumentsTemplate { get; set; }
+    public string ArgumentsTemplate { get; set; } = "";
 
     /// <summary>Default timeout</summary>
     public TimeSpan DefaultTimeout { get; set; }
@@ -242,13 +242,13 @@ public class LlmClientStatus
     public int ActiveProcesses { get; set; }
 
     /// <summary>File version</summary>
-    public string Version { get; set; }
+    public string Version { get; set; } = "Unknown";
 
     /// <summary>Product name</summary>
-    public string ProductName { get; set; }
+    public string ProductName { get; set; } = "Unknown";
 
     /// <summary>File size in bytes</summary>
-    public long FileSize { get; set; }
+    public long FileSize { get; set; } = 0L;
 
     /// <summary>Last modified date</summary>
     public DateTime LastModified { get; set; }

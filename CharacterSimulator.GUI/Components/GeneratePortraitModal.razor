@@ -155,8 +155,7 @@
                 try
                 {
                     var info = CharacterCatalog.LoadCardDetails(_selectedCharacterFile);
-                    _prompt = !string.IsNullOrEmpty(info.Physical) ? info.Physical : 
-                             (!string.IsNullOrEmpty(info.Description) ? info.Description : "");
+                    _prompt = CardFieldFormatter.BuildImagingPrompt(info.Physical, info.CharacterStyle);
                 }
                 catch { }
             }
@@ -223,8 +222,7 @@
             try
             {
                 var info = CharacterCatalog.LoadCardDetails(fileName);
-                _prompt = !string.IsNullOrEmpty(info.Physical) ? info.Physical : 
-                         (!string.IsNullOrEmpty(info.Description) ? info.Description : "");
+                _prompt = CardFieldFormatter.BuildImagingPrompt(info.Physical, info.CharacterStyle);
                 
                 // If still empty, use a default
                 if (string.IsNullOrEmpty(_prompt))

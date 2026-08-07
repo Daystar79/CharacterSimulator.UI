@@ -14,6 +14,9 @@ public static class PromptBuilder
 {
     public static string BuildAppearanceSummary(Character character)
     {
+        if (!string.IsNullOrWhiteSpace(character.PhysicalDescription))
+            return character.PhysicalDescription.Trim();
+
         var attrs = character.Attributes;
         if (attrs.TryGetValue("physical", out var physical) && !string.IsNullOrWhiteSpace(physical)
             && !attrs.ContainsKey("hair") && !attrs.ContainsKey("eyes"))
@@ -22,10 +25,11 @@ public static class PromptBuilder
         }
 
         var parts = new List<string>();
-        foreach (var key in new[] { "height", "build", "hair", "eyes", "skin", "clothing", "defining_features" })
+        // Body only — never clothing (that is CharacterStyle)
+        foreach (var key in new[] { "height", "build", "body_details", "hair", "eyes", "skin", "face", "defining_features", "distinguishing_features", "posture_movement" })
         {
             if (attrs.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
-                parts.Add(key + ": " + value);
+                parts.Add(value);
         }
 
         if (parts.Count == 0 && attrs.TryGetValue("physical", out var fallback) && !string.IsNullOrWhiteSpace(fallback))
@@ -40,8 +44,14 @@ public static class PromptBuilder
         sb.AppendLine("CHARACTER IDENTITY (immutable — this is who you are in every scene):");
         sb.AppendLine("Name: " + character.Name);
 
+        if (!string.IsNullOrWhiteSpace(character.Personality))
+            sb.AppendLine("Personality (who you are): " + character.Personality.Trim());
+
+        if (!string.IsNullOrWhiteSpace(character.Behavior))
+            sb.AppendLine("Behavior (how you act): " + character.Behavior.Trim());
+
         if (!string.IsNullOrWhiteSpace(character.Bio))
-            sb.AppendLine("Personality & Background: " + character.Bio.Trim());
+            sb.AppendLine("Background & knowledge: " + character.Bio.Trim());
 
         if (!string.IsNullOrWhiteSpace(character.CognitiveBias))
             sb.AppendLine("Cognitive Wound (Defensive Lens): " + character.CognitiveBias.Trim());
@@ -53,7 +63,12 @@ public static class PromptBuilder
             sb.AppendLine("Cultural & Background Bias: " + character.CulturalBias.Trim());
 
         string appearance = BuildAppearanceSummary(character);
-        sb.AppendLine("Physical Appearance: " + appearance);
+        sb.AppendLine("Physical Appearance (body only): " + appearance);
+
+        if (!string.IsNullOrWhiteSpace(character.CharacterStyle))
+            sb.AppendLine("Default dress / style: " + character.CharacterStyle.Trim());
+        else if (character.Attributes.TryGetValue("character_style", out var styleAttr) && !string.IsNullOrWhiteSpace(styleAttr))
+            sb.AppendLine("Default dress / style: " + styleAttr.Trim());
 
         if (character.Attributes.TryGetValue("voice", out var voice) && !string.IsNullOrWhiteSpace(voice))
             sb.AppendLine("Voice: " + voice.Trim());
