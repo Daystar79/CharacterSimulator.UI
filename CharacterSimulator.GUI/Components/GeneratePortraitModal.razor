@@ -124,11 +124,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load character list for dropdown
-        LoadCharacterOptions();
-
         // Set initial character selection
         _selectedCharacterFile = CardFileName;
+        
+        // Load character list for dropdown
+        LoadCharacterOptions();
         
         // Update cardId and prompt based on the initial character
         if (!string.IsNullOrEmpty(_selectedCharacterFile))
@@ -198,7 +198,9 @@
         
         try
         {
-            var catalog = CharacterCatalog.ListCards();
+            // Use ListCardsFresh to ensure we get the latest from disk
+            // (bypasses any stale SQLite cache)
+            var catalog = CharacterCatalog.ListCardsFresh();
             foreach (var card in catalog)
             {
                 _characterOptions.Add(new(card.FileName, card.DisplayName));
