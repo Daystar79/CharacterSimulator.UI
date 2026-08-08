@@ -1,75 +1,61 @@
-@* Left rail: scene + character images only *@
+@* Left rail: one stage still — character physical + scene combined *@
 
 <div class="character-panel character-panel-left image-rail">
-    <div class="image-block">
-        <div class="image-block-label">Scene</div>
-        <div class="scene-stage">
-            @if (!string.IsNullOrEmpty(SceneImagePath) && (File.Exists(SceneImagePath) || SceneImagePath.StartsWith("http") || SceneImagePath.StartsWith("data:")))
+    <div class="image-block image-block-full">
+        <div class="image-block-label">Stage</div>
+        <div class="scene-stage stage-frame">
+            @if (!string.IsNullOrEmpty(StageImagePath) && (File.Exists(StageImagePath) || StageImagePath.StartsWith("http") || StageImagePath.StartsWith("data:")))
             {
-                <img class="scene-stage-img" src="@SceneImagePath" alt="Scene Location" />
+                <img class="scene-stage-img" src="@StageImagePath" alt="Stage" />
             }
             else
             {
                 <div class="scene-stage-fallback">
-                    <div class="canvas-avatar-icon">🏙️</div>
-                    <div class="canvas-char-name">@GenreDisplayName</div>
+                    <div class="canvas-avatar-icon">@(IsCharacterLoaded ? "🎭" : "🏙️")</div>
+                    <div class="canvas-char-name">
+                        @(IsCharacterLoaded ? CharName : GenreDisplayName)
+                    </div>
                     <div class="canvas-bio">
-                        @(string.IsNullOrWhiteSpace(SceneLocationText)
-                            ? "Set location on the right, then generate scene art."
-                            : (SceneLocationText.Length > 100 ? SceneLocationText[..97] + "…" : SceneLocationText))
+                        @if (IsCharacterLoaded && !string.IsNullOrWhiteSpace(SceneLocationText))
+                        {
+                            @((SceneLocationText.Length > 120 ? SceneLocationText[..117] + "…" : SceneLocationText))
+                        }
+                        else if (!string.IsNullOrWhiteSpace(SceneLocationText))
+                        {
+                            @("Environment only — select a character for a full stage still.")
+                        }
+                        else
+                        {
+                            @("Set genre/location (and character) on the right, then generate.")
+                        }
                     </div>
                 </div>
             }
         </div>
-        <button class="btn btn-secondary scene-generate-btn" disabled="@IsGeneratingScene" @onclick="HandleGenerateScene">
-            @(IsGeneratingScene ? "✨ Rendering Scene..." : "✨ Generate Scene Artwork")
-        </button>
-    </div>
-
-    <div class="image-block">
-        <div class="image-block-label">Character</div>
-        <div class="char-portrait-frame image-rail-portrait">
-            @if (IsCharacterLoaded && !string.IsNullOrEmpty(CharAvatarPath) && (File.Exists(CharAvatarPath) || CharAvatarPath.StartsWith("http") || CharAvatarPath.StartsWith("data:")))
-            {
-                <img class="char-portrait-img" src="@CharAvatarPath" alt="@CharName" />
-            }
-            else if (IsCharacterLoaded)
-            {
-                <div class="scene-stage-fallback">
-                    <div class="canvas-avatar-icon">👤</div>
-                    <div class="canvas-char-name">@CharName @(CharAge > 0 ? $"({CharAge})" : "")</div>
-                    <div class="canvas-bio">Generate a portrait from Physical + Style on the right.</div>
-                </div>
-            }
-            else
-            {
-                <div class="scene-stage-fallback">
-                    <div class="canvas-avatar-icon">👤</div>
-                    <div class="canvas-char-name">No character</div>
-                    <div class="canvas-bio">Select a character on the right.</div>
-                </div>
-            }
+        <div class="image-rail-actions">
+            <button class="btn btn-secondary scene-generate-btn" disabled="@IsGenerating" @onclick="HandleGenerate">
+                @(IsGenerating ? "✨ Rendering image..." : "🎨 Generate Image")
+            </button>
+            <button class="btn btn-secondary scene-settings-btn" @onclick="HandleOpenImagingSettings" title="Imaging Settings">
+                ⚙️ Settings
+            </button>
         </div>
-        <button class="btn btn-secondary scene-generate-btn char-portrait-generate-btn"
-                disabled="@(!IsCharacterLoaded)"
-                @onclick="HandleGeneratePortrait">
-            ✨ Generate Portrait
-        </button>
+        <div class="image-rail-hint">
+            Combines scene location with character physical &amp; style into one still.
+        </div>
     </div>
 </div>
 
 @code {
-    [Parameter] public string SceneImagePath { get; set; } = "";
+    [Parameter] public string StageImagePath { get; set; } = "";
     [Parameter] public string GenreDisplayName { get; set; } = "";
     [Parameter] public string SceneLocationText { get; set; } = "";
-    [Parameter] public bool IsGeneratingScene { get; set; }
+    [Parameter] public bool IsGenerating { get; set; }
     [Parameter] public bool IsCharacterLoaded { get; set; }
     [Parameter] public string CharName { get; set; } = "";
-    [Parameter] public int CharAge { get; set; }
-    [Parameter] public string CharAvatarPath { get; set; } = "";
-    [Parameter] public EventCallback OnGenerateScene { get; set; }
-    [Parameter] public EventCallback OnGeneratePortrait { get; set; }
+    [Parameter] public EventCallback OnGenerate { get; set; }
+    [Parameter] public EventCallback OnOpenImagingSettings { get; set; }
 
-    private Task HandleGenerateScene() => OnGenerateScene.InvokeAsync();
-    private Task HandleGeneratePortrait() => OnGeneratePortrait.InvokeAsync();
+    private Task HandleGenerate() => OnGenerate.InvokeAsync();
+    private Task HandleOpenImagingSettings() => OnOpenImagingSettings.InvokeAsync();
 }

@@ -27,12 +27,14 @@ public class ImageArtStyleCatalogTests
     }
 
     [Fact]
-    public void BuildScenePrompt_PrependsSceneCueAtBeginning()
+    public void BuildScenePrompt_LeadsWithCharacterInLocation()
     {
         string scenePrompt = ImageArtStyleCatalog.BuildScenePrompt(
-            "Cyberpunk city neon alley", "Serena", "Character description", "Physical details", "comic");
+            "Cyberpunk city neon alley", "Serena", null, "Physical details", "comic");
 
-        Assert.StartsWith("western comic book environment panel", scenePrompt, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("Cinematic full-body shot of Serena", scenePrompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Physical details", scenePrompt);
         Assert.Contains("Cyberpunk city neon alley", scenePrompt);
+        Assert.Contains("western comic book environment panel", scenePrompt, StringComparison.OrdinalIgnoreCase);
     }
 }

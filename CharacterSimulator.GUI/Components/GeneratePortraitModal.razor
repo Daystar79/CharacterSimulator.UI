@@ -7,7 +7,13 @@
     <div class="modal-card" style="width: 560px;">
         <div class="modal-header">
             <div class="modal-title">🎨 AI CHARACTER PORTRAIT GENERATOR</div>
-            <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                @if (OnOpenSetup.HasDelegate)
+                {
+                    <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;" @onclick="HandleOpenSetup" title="Open Full System Setup">⚙️ Advanced Setup</button>
+                }
+                <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem;" @onclick="Close">✕</button>
+            </div>
         </div>
         <div class="modal-body">
             <p style="font-size: 0.75rem; color: var(--text-secondary);">
@@ -101,6 +107,8 @@
 @code {
     [Parameter] public string SlotName { get; set; } = "Slot A";
     [Parameter] public EventCallback<string> OnPortraitGenerated { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+    [Parameter] public EventCallback OnOpenSetup { get; set; }
     [Parameter] public string CharacterAppearance { get; set; } = "";
     [Parameter] public string CardFileName { get; set; } = "";
 
@@ -160,7 +168,7 @@
                 catch { }
             }
             if (string.IsNullOrEmpty(_prompt))
-                _prompt = "solo character portrait, detailed appearance";
+                _prompt = "solo character portrait, detailed physical appearance";
         }
 
         // Component is created fresh each time Index opens the modal (@if) —
@@ -470,9 +478,15 @@
             await OnPortraitGenerated.InvokeAsync(_generatedImagePath);
     }
 
+    private async Task HandleOpenSetup()
+    {
+        await OnOpenSetup.InvokeAsync();
+    }
+
     private async Task Close()
     {
         // Keep stage portrait if we already applied on generate; empty close only dismisses modal
         await OnPortraitGenerated.InvokeAsync("");
+        await OnClosed.InvokeAsync();
     }
 }

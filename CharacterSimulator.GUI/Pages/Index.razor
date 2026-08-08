@@ -1,5 +1,7 @@
 @page "/"
 @using CharacterSimulator.Logic.Services
+@using CharacterSimulator.GUI.Components
+@using CharacterSimulator.GUI.Components.Workspace
 @inject TurnControlContext ControlContext
 @inject SimulationHost SimHost
 @inject IJSRuntime JS
@@ -7,16 +9,14 @@
 
 <div class="workspace-grid">
     <ImageRail
-        SceneImagePath="@_sceneImagePath"
+        StageImagePath="@_stageImagePath"
         GenreDisplayName="@SceneGenreCatalog.GetById(_selectedGenre).DisplayName"
         SceneLocationText="@_sceneLocationText"
-        IsGeneratingScene="@_isGeneratingScene"
+        IsGenerating="@_isGeneratingStage"
         IsCharacterLoaded="@_isCharacterLoaded"
         CharName="@_charName"
-        CharAge="@_charAge"
-        CharAvatarPath="@_charAvatarPath"
-        OnGenerateScene="GenerateSceneArtwork"
-        OnGeneratePortrait="OpenPortraitFromRail" />
+        OnGenerate="GenerateStageArtwork"
+        OnOpenImagingSettings="GeneratePortraitImage" />
 
     <DialoguePanel
         CenterTab="@_centerTab"
@@ -60,18 +60,28 @@
 
 @if (_showGeneratePortraitModal)
 {
-    <GeneratePortraitModal SlotName="Character" CharacterAppearance="@_portraitAppearance" CardFileName="@_portraitCardFile" OnPortraitGenerated="OnPortraitGenerated" />
+    <GeneratePortraitModal
+        CardFileName="@_selectedCharFile"
+        CharacterAppearance="@BuildPortraitAppearance()"
+        OnClosed="OnPortraitModalClosed"
+        OnOpenSetup="OpenSetupFromPortraitModal" />
+}
+
+@if (_showSetupModal)
+{
+    <SimulationSetupModal ActiveSection="@_setupActiveSection" OnClosed="OnSetupModalClosed" />
 }
 
 @code {
     private string _centerTab = "Dialogue";
     private string _charDetailTab = "Personality";
-    private bool _showGeneratePortraitModal;
-    private string _portraitAppearance = "";
-    private string _portraitCardFile = "";
-    private string _sceneImagePath = "";
-    private bool _isGeneratingScene;
+    /// <summary>Single left-rail still: character physical/style + scene location.</summary>
+    private string _stageImagePath = "";
+    private bool _isGeneratingStage;
     private bool _isGeneratingLocation;
+    private bool _showGeneratePortraitModal = false;
+    private bool _showSetupModal = false;
+    private string _setupActiveSection = "Roleplaying";
 
     private string _selectedGenre = SceneGenreCatalog.DefaultGenreId;
     private string _sceneLocationText = "";
@@ -85,7 +95,6 @@
     private string _charBehavior = "";
     private string _charPhysical = "";
     private string _charStyle = "";
-    private string _charAvatarPath = "";
     private List<CustomSelect.DropdownOption> _characterDropdownOptions = new();
 
     private bool _isCharacterLoaded =>
@@ -143,8 +152,8 @@
             _sceneLocationText = SceneGenreCatalog.DefaultSceneFor(_selectedGenre);
         }
 
-        if (string.IsNullOrEmpty(_sceneImagePath))
-            _ = AutoEnsureSceneArtworkAsync();
+        if (string.IsNullOrEmpty(_stageImagePath))
+            _ = AutoEnsureStageArtworkAsync();
     }
 
     public void Dispose()
@@ -156,14 +165,17 @@
         SimHost.OnFeedClear -= OnHostFeedClear;
     }
 
-    private void OpenPortraitFromRail() =>
-        OpenGeneratePortraitModal(BuildPortraitAppearance(), _selectedCharFile);
-
-    private async Task GenerateSceneArtwork()
+    /// <summary>
+    /// One left-rail still: physical + style of the loaded character composited into the scene.
+    /// </summary>
+    private async Task GenerateStageArtwork()
     {
         PersistSceneFields();
-        _isGeneratingScene = true;
-        using var busy = BusyTaskService.BeginTask("scene_artwork", $"Rendering Scene Artwork ({SceneGenreCatalog.GetById(_selectedGenre).DisplayName})...");
+        _isGeneratingStage = true;
+        using var busy = BusyTaskService.BeginTask("stage_artwork",
+            _isCharacterLoaded
+                ? $"Rendering stage · {_charName} in scene…"
+                : $"Rendering stage · environment only…");
         StateHasChanged();
         try
         {
@@ -177,25 +189,28 @@
                 : _sceneLocationText.Trim();
 
             string sceneContext = SceneGenreCatalog.ComposeSceneContext(_selectedGenre, place);
-            string scenePrompt = ImageArtStyleCatalog.BuildScenePrompt(
+            // Physical + style when a character is loaded — single combined prompt.
+            string? appearance = _isCharacterLoaded ? BuildPortraitAppearance() : null;
+
+            string stagePrompt = ImageArtStyleCatalog.BuildScenePrompt(
                 sceneContext,
                 characterName: _isCharacterLoaded ? _charName : null,
                 characterDescription: null,
-                characterPhysical: _isCharacterLoaded ? BuildPortraitAppearance() : null,
+                characterPhysical: appearance,
                 artStyleId: artStyleId);
 
-            _sceneImagePath = await AiImageGeneratorService.GeneratePortraitAsync(
-                scenePrompt, "scene_location", engineEnum, imageModel,
+            _stageImagePath = await AiImageGeneratorService.GeneratePortraitAsync(
+                stagePrompt, "stage_still", engineEnum, imageModel,
                 allowPollinationsFallback: true, artStyleId: artStyleId, applyArtStyle: false);
 
-            await ApplySceneBackdropAsync(_sceneImagePath);
+            await ApplySceneBackdropAsync(_stageImagePath);
 
             _outputLogs.Add(new LogEntryModel
             {
                 Timestamp = DateTime.Now,
-                Message = $"Scene art · {SceneGenreCatalog.GetById(_selectedGenre).DisplayName} · " +
+                Message = $"Stage image · {SceneGenreCatalog.GetById(_selectedGenre).DisplayName} · " +
                           $"style {ImageArtStyleCatalog.GetById(artStyleId).DisplayName}" +
-                          (_isCharacterLoaded ? $" · with {_charName}" : " · environment only") +
+                          (_isCharacterLoaded ? $" · {_charName} (physical+style in scene)" : " · environment only") +
                           " · app backdrop updated",
                 LevelClass = "log-success"
             });
@@ -205,13 +220,13 @@
             _outputLogs.Add(new LogEntryModel
             {
                 Timestamp = DateTime.Now,
-                Message = $"Scene art failed: {ex.Message}",
+                Message = $"Stage image failed: {ex.Message}",
                 LevelClass = "log-error"
             });
         }
         finally
         {
-            _isGeneratingScene = false;
+            _isGeneratingStage = false;
             StateHasChanged();
         }
     }
@@ -308,7 +323,7 @@
                         Message = $"✨ AI Scene Location generated successfully ({genreName}).",
                         LevelClass = "log-success"
                     });
-                    _ = GenerateSceneArtwork();
+                    _ = GenerateStageArtwork();
                     return;
                 }
             }
@@ -410,7 +425,6 @@
             _charBehavior = info.Behavior;
             _charPhysical = info.Physical;
             _charStyle = info.CharacterStyle;
-            _charAvatarPath = info.AvatarPath;
 
             SimHost.SetStagedCharacter(fileName);
             SaveSelectedCharacter(fileName);
@@ -444,21 +458,8 @@
 
             StateHasChanged();
 
-            string cardId = CharacterCatalog.GetCardId(fileName);
-            string avatar = ResolveStoredPortraitUri(fileName, info.AvatarPath);
-
-            if (IsDisplayableAvatar(avatar))
-                _charAvatarPath = avatar;
-            else
-            {
-                _charAvatarPath = "";
-                _ = AutoEnsurePortraitAsync(cardId, info.Physical, info.CharacterStyle);
-            }
-
-            if (string.IsNullOrEmpty(_sceneImagePath))
-                _ = AutoEnsureSceneArtworkAsync();
-
-            StateHasChanged();
+            // Rebuild combined stage still (physical + scene) for the left rail
+            _ = GenerateStageArtwork();
         }
         catch (Exception ex)
         {
@@ -474,55 +475,14 @@
         await Task.CompletedTask;
     }
 
-    private string ResolveStoredPortraitUri(string fileName, string catalogAvatarPath)
+    private async Task AutoEnsureStageArtworkAsync()
     {
-        if (string.IsNullOrWhiteSpace(fileName)) return "";
-
-        string cardId = CharacterCatalog.GetCardId(fileName);
-        if (string.IsNullOrEmpty(cardId))
-            return IsDisplayableAvatar(catalogAvatarPath) ? catalogAvatarPath : "";
-
-        try
-        {
-            string? dbUri = CharacterPortraitService.TryGetStoredDataUri(cardId);
-            if (!string.IsNullOrEmpty(dbUri))
-                return dbUri;
-        }
-        catch { }
-
-        return IsDisplayableAvatar(catalogAvatarPath) ? catalogAvatarPath : "";
-    }
-
-    private async Task AutoEnsurePortraitAsync(string cardId, string physical, string characterStyle)
-    {
-        if (string.IsNullOrWhiteSpace(cardId)) return;
-        try
-        {
-            string prompt = CardFieldFormatter.BuildImagingPrompt(physical, characterStyle, _charName);
-            if (string.IsNullOrWhiteSpace(prompt))
-                prompt = string.IsNullOrWhiteSpace(_charName) ? "solo character portrait" : $"{_charName}, solo character portrait";
-
-            string portraitUri = await CharacterPortraitService.EnsurePortraitAsync(cardId, prompt, generateIfMissing: true);
-            if (!string.IsNullOrEmpty(portraitUri))
-            {
-                _charAvatarPath = portraitUri;
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Index] Auto ensure portrait failed: {ex.Message}");
-        }
-    }
-
-    private async Task AutoEnsureSceneArtworkAsync()
-    {
-        if (_isGeneratingScene || !string.IsNullOrEmpty(_sceneImagePath))
+        if (_isGeneratingStage || !string.IsNullOrEmpty(_stageImagePath))
             return;
-        try { await GenerateSceneArtwork(); }
+        try { await GenerateStageArtwork(); }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Index] Auto ensure scene artwork failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[Index] Auto ensure stage artwork failed: {ex.Message}");
         }
     }
 
@@ -537,7 +497,6 @@
         _charBehavior = "";
         _charPhysical = "";
         _charStyle = "";
-        _charAvatarPath = "";
         SimHost.SetStagedCharacter("");
         SaveSelectedCharacter("");
 
@@ -549,15 +508,11 @@
                 Message = "Character removed from stage.",
                 LevelClass = "log-info"
             });
+            // Refresh stage still without the character
+            _ = GenerateStageArtwork();
         }
         StateHasChanged();
     }
-
-    private static bool IsDisplayableAvatar(string? path) =>
-        !string.IsNullOrEmpty(path) &&
-        (path.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
-         path.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
-         File.Exists(path));
 
     private void OnHostDialogueLine(DialogueLine line)
     {
@@ -743,23 +698,6 @@
     private string BuildPortraitAppearance() =>
         CardFieldFormatter.BuildImagingPrompt(_charPhysical, _charStyle, _charName);
 
-    private void OpenGeneratePortraitModal(string appearance, string cardFileName)
-    {
-        _portraitAppearance = appearance;
-        _portraitCardFile = cardFileName;
-        _showGeneratePortraitModal = true;
-    }
-
-    private void OnPortraitGenerated(string path)
-    {
-        _showGeneratePortraitModal = false;
-        if (!string.IsNullOrEmpty(path))
-        {
-            _charAvatarPath = path;
-            StateHasChanged();
-        }
-    }
-
     private void OnPlayerInputKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
@@ -798,5 +736,36 @@
                 LevelClass = "log-error"
             });
         }
+    }
+
+    private async Task GeneratePortraitImage()
+    {
+        _showGeneratePortraitModal = true;
+        await Task.CompletedTask;
+    }
+
+    private void OnPortraitModalClosed()
+    {
+        _showGeneratePortraitModal = false;
+        StateHasChanged();
+    }
+
+    private void OpenSetupFromPortraitModal()
+    {
+        _showGeneratePortraitModal = false;
+        OpenImagingSettings();
+    }
+
+    private void OpenImagingSettings()
+    {
+        _showSetupModal = true;
+        _setupActiveSection = "Imaging";
+        StateHasChanged();
+    }
+
+    private void OnSetupModalClosed(bool launched)
+    {
+        _showSetupModal = false;
+        StateHasChanged();
     }
 }
